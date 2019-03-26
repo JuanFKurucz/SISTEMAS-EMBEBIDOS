@@ -24,6 +24,26 @@ void delay(long milisegundos){
    while((MS_TIMER - tiempoAhora) < milisegundos){
    }
 }
+
+int getAnalogInput(unsigned char p_input){
+   char leer[5];
+   char guardar[29];
+   int i;
+   leer[0] = 0x02;
+   leer[1] = 0x48;
+   leer[2] = 0x49;
+   leer[3] = 0x03;
+   leer[4] = 0x48;
+   printf(leer);
+   serCputs(leer);
+   i=0;
+   while(i < 29){
+   	guardar[i] = serCgetc();
+   }
+   printf("%d",guardar);
+
+}
+
 configurar(){
 	WrPortI(SPCR, &SPCRShadow, 0x084); // Puerto A (LEDS) como output
    BitWrPortI(PBDDR, &PBDDRShadow, 0x00, 2); // Puerto B bit2
@@ -35,14 +55,14 @@ configurar(){
    BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 5); // Puerto F bit5
    BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 6); // Puerto F bit6
    BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 7); // Puerto F bit7
-
+   serCopen(9600); //configurar serial port c
 }
 
 main()
 {
 	int i;
 	configurar();
-
+   getAnalogInput(58);
    //prender Led
    for(i = 0; i<8; i++ ) {
     prenderLed(i);
@@ -97,6 +117,7 @@ main()
       }
    	printf("estado");
    	printf("%d\n", BitRdPortI(PBDR, 2));
+
    }
 }
 
