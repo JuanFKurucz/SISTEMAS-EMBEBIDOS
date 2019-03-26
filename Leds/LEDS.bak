@@ -18,9 +18,8 @@ char getInput(enum portName p_port, enum bitNumber p_pin){
     return BitRdPortI(p_port, p_pin);
 }
 
-void delay(long milisegundos){
-	long tiempoAhora;
-   tiempoAhora = MS_TIMER;
+void delay(int milisegundos){
+	int tiempoAhora = MS_TIMER;
    while((MS_TIMER - tiempoAhora) < milisegundos){
    }
 }
@@ -40,10 +39,10 @@ configurar(){
 
 main()
 {
-	int i;
 	configurar();
 
    //prender Led
+   int i;
    for(i = 0; i<8; i++ ) {
     prenderLed(i);
     delay(500);
