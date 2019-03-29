@@ -1,21 +1,73 @@
 #class auto
 
-enum portName { PA = PADR, PF = PFDR, PB = PBDR};
-enum bitNumber {PA0,PA1,PA2,PA3,PA4,PA5,PA6,PA7};
+enum portName {PA,PF,PB};
+enum bitNumber {Bit0,Bit1,Bit2,Bit3,Bit4,Bit5,Bit6,Bit7};
 
-#define prenderLed(x) setOutput(PADR,x,1)
-#define apagarLed(x) setOutput(PADR,x,0)
-#define leerBoton(puerto, bit) getInput(puerto, bit)
+#define prenderLed(x) setOutput(PA,x,1)
+#define apagarLed(x) setOutput(PA,x,0)
+#define leerBoton(bit) getInputButton(bit)
+
 void setOutput(enum portName p_port, enum bitNumber p_pin, unsigned char p_state){
    char* shadow;
-   if(p_port == PADR){
-    shadow=&PADRShadow;
+   int port;
+   if(p_port == PA){
+		port = PADR;
+   	shadow = &PADRShadow;
+   } else if(p_port == PF){
+		port = PFDR;
+   	shadow = &PFDRShadow;
+   } else if(p_port == PB){
+		port = PBDR;
+   	shadow = &PBDRShadow;
+   } else {
+      return;
    }
-   BitWrPortI(p_port, shadow, p_state, p_pin);
+   BitWrPortI(port, shadow, p_state, p_pin);
 }
 
 char getInput(enum portName p_port, enum bitNumber p_pin){
     return BitRdPortI(p_port, p_pin);
+}
+
+char getInputButton(enum bitNumber p_pin){
+	int bit;
+   int port;
+   switch(p_pin){
+   	case 0:
+   	case 1:
+   	case 2:
+   	case 3:
+      	port = PBDR;
+      	break;
+   	case 4:
+   	case 5:
+   	case 6:
+   	case 7:
+      	port = PFDR;
+     		break;
+      default:
+      	return -1;
+   }
+   if(p_pin == Bit0){
+   	bit = 2;
+   } else if(p_pin == Bit1){
+		bit = 3;
+   }  else if(p_pin == Bit2){
+		bit = 4;
+   } else if(p_pin == Bit3){
+		bit = 5;
+   } else if(p_pin == Bit4){
+		bit = 4;
+   } else if(p_pin == Bit5){
+		bit = 5;
+   } else if(p_pin == Bit6){
+		bit = 6;
+   } else if(p_pin == Bit7){
+		bit = 7;
+   } else {
+     return -1;
+   }
+   return getInput(port, bit);
 }
 
 void delay(long milisegundos){
@@ -62,7 +114,7 @@ main()
 {
 	int i;
 	configurar();
-   getAnalogInput(58);
+   //getAnalogInput(58);
    //prender Led
    for(i = 0; i<8; i++ ) {
     prenderLed(i);
@@ -73,51 +125,15 @@ main()
    }
 
    while(1){
-   	if (leerBoton(PB, 2) == 0){
-      	prenderLed(PA0);
-      }else {
-        apagarLed(PA0);
-      }
-
-      if (leerBoton(PB, 3) == 0){
-      	prenderLed(PA1);
-      }else {
-        apagarLed(PA1);
-      }
-
-      if (leerBoton(PB, 4) == 0){
-      	prenderLed(PA2);
-      }else {
-        apagarLed(PA2);
-      }
-      if (leerBoton(PB, 5) == 0){
-      	prenderLed(PA3);
-      }else {
-        apagarLed(PA3);
-      }
-      if (leerBoton(PF, 4) == 0){
-      	prenderLed(PA4);
-      }else {
-        apagarLed(PA4);
-      }
-      if (leerBoton(PF, 5) == 0){
-      	prenderLed(PA5);
-      }else {
-        apagarLed(PA5);
-      }
-      if (leerBoton(PF, 6) == 0){
-      	prenderLed(PA6);
-      }else {
-        apagarLed(PA6);
-      }
-      if (leerBoton(PF, 7) == 0){
-      	prenderLed(PA7);
-      }else {
-        apagarLed(PA7);
+   	for( i = Bit0; i <= Bit7; i++ ) {
+      	if (leerBoton(i) == 0){
+   	   	prenderLed(i);
+	      }else {
+	        	apagarLed(i);
+	      }
       }
    	printf("estado");
-   	printf("%d\n", BitRdPortI(PBDR, 2));
-
+   	printf("%d\n", BitRdPortI(PBDR, 2));                
    }
 }
 
