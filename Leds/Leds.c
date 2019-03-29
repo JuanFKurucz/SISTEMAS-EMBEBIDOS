@@ -80,20 +80,27 @@ void delay(long milisegundos){
 int getAnalogInput(unsigned char p_input){
    char leer[5];
    char guardar[29];
+   int suma;
    int i;
-   leer[0] = 0x02;
-   leer[1] = 0x48;
-   leer[2] = 0x49;
-   leer[3] = 0x03;
-   leer[4] = 0x48;
-   printf(leer);
-   serCputs(leer);
+   serCwrFlush();       // flush their input and transmit buffers
+   serCrdFlush();
+
+   serCputc((char)2);
+   serCputc((char)48);
+   serCputc((char)49);
+   serCputc((char)3);
+   serCputc(5);
    i=0;
    while(i < 29){
    	guardar[i] = serCgetc();
-   }
-   printf("%d",guardar);
 
+   	printf("Caracter: %d\n",guardar[i]);
+   	suma += guardar[i];
+      i++;
+   }
+
+   printf("Mensaje: %s\n",guardar);
+   return i-guardar[28];
 }
 
 configurar(){
@@ -108,13 +115,13 @@ configurar(){
    BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 6); // Puerto F bit6
    BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 7); // Puerto F bit7
    serCopen(9600); //configurar serial port c
+
 }
 
 main()
 {
 	int i;
 	configurar();
-   //getAnalogInput(58);
    //prender Led
    for(i = 0; i<8; i++ ) {
     prenderLed(i);
@@ -125,6 +132,7 @@ main()
    }
 
    while(1){
+  		getAnalogInput(58);
    	for( i = Bit0; i <= Bit7; i++ ) {
       	if (leerBoton(i) == 0){
    	   	prenderLed(i);
@@ -132,8 +140,8 @@ main()
 	        	apagarLed(i);
 	      }
       }
-   	printf("estado");
-   	printf("%d\n", BitRdPortI(PBDR, 2));                
+   	//printf("estado\n");
+   	//printf("%d\n", BitRdPortI(PBDR, 2));
    }
 }
 
