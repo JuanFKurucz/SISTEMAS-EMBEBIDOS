@@ -1,0 +1,38 @@
+#class auto
+
+configurar(){
+	WrPortI(SPCR, &SPCRShadow, 0x084); // Puerto A (LEDS) como output
+
+   BitWrPortI(PEDDR, &PEDDRShadow, 1, 5);
+
+   BitWrPortI(PBDDR, &PBDDRShadow, 0x00, 2); // Puerto B bit2
+   BitWrPortI(PBDDR, &PBDDRShadow, 0x00, 3); // Puerto B bit3
+   BitWrPortI(PBDDR, &PBDDRShadow, 0x00, 4); // Puerto B bit4
+   BitWrPortI(PBDDR, &PBDDRShadow, 0x00, 5); // Puerto B bit5
+
+   BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 4); // Puerto F bit4
+   BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 5); // Puerto F bit5
+   BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 6); // Puerto F bit6
+   BitWrPortI(PFDDR, &PFDDRShadow, 0x00, 7); // Puerto F bit7
+   serCopen(9600); //configurar serial port c
+
+}
+
+main()
+{
+	int i;
+	configurar();
+   //prender Led
+
+
+   while(1){
+  	 costate(){
+    BitWrPortI(PEDR, &PEDRShadow, 1, 5);
+    waitfor(DelayMs(400));
+     BitWrPortI(PEDR, &PEDRShadow, 0, 5);
+     waitfor(DelayMs(800));
+    }
+   }
+}
+
+
