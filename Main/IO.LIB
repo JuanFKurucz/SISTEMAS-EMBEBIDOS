@@ -60,6 +60,8 @@ void HW_init( void )
 
 	// Puerto Serie PIC
 	serCopen(PIC_PROTOCOL_BAUDRATE);
+
+	BitWrPortI(PEDDR, &PEDDRShadow, 1, 5);
 }
 
 /*** BeginHeader IO_getInput */
@@ -187,4 +189,3 @@ int IO_getAnalogInput( unsigned char p_input )
 
 	return retVal;
 }
-
