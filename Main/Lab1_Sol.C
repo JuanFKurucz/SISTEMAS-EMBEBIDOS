@@ -2,6 +2,7 @@
 #use BTN.LIB
 #use LED.LIB
 #use UTILITIES.LIB
+#define MAX_EVENTOS 10
 
 typedef struct Events{
 	char command;
@@ -9,7 +10,6 @@ typedef struct Events{
 	unsigned long time;
 } Event;
 
-#define MAX_EVENTOS 10
 
 esperar_texto(char* texto){
 	while(1){
@@ -37,14 +37,13 @@ main()
 {
 	Event eventos[MAX_EVENTOS];
 	int i;
-	char uno;
 	char texto[10];
 	char texto2[10];
 	int response;
 	int ev;
 	ev = 0;
 	HW_init();
-	uno = '1';
+
 	while(1){
 		costate{
 			LED_ROJO_SET();
