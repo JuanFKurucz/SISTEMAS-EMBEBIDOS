@@ -3,6 +3,7 @@
 #use LED.LIB
 #use UTILITIES.LIB
 #define MAX_EVENTOS 10
+#define MAX_TIME 32767
 
 typedef struct Events{
 	char command;
@@ -69,7 +70,10 @@ main()
 				case '1':
 					printf("Ingrese la hora\n");
 					waitfor(getswf(texto2));
-					write_rtc(atoi(texto2));
+               time=atoi(texto2);
+               if(time>=0 && time <=MAX_TIME){
+	            	write_rtc(atoi(texto2));
+               }
 					break;
 				case '2':
 					printf("%d",read_rtc());
@@ -97,7 +101,7 @@ main()
 	               waitfor(getswf(texto2));
 	               time = atoi(texto2);
 
-	               if((command == '1' || command == '0') && (param>='0' && param <='7') && (time <= 32767)){
+	               if((command == '1' || command == '0') && (param>='0' && param <='7') && (time <= MAX_TIME)){
 	                  eventos[posicion].command = command;
 	                  eventos[posicion].param = param;
 	                  eventos[posicion].time = time;
@@ -131,6 +135,8 @@ main()
                	}
                }
 					break;
+            default:
+            	printf("Comando no encontrado");
 			}
 		}
 	}
