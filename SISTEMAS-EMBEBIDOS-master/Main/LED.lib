@@ -1,0 +1,13 @@
+/*** BeginHeader */
+
+#use IO.LIB
+
+#define LED_PORT		PORT_A
+#define LED_OFF			0
+#define LED_ON			1
+#define LED_SET(x)   	IO_setOutput( LED_PORT, x, LED_ON)
+#define LED_RESET(x) 	IO_setOutput( LED_PORT, x, LED_OFF)
+#define LED_ROJO_SET() 	IO_setOutput(PORT_E, 5, LED_ON);
+#define LED_ROJO_RESET() IO_setOutput(PORT_E, 5, LED_OFF);
+
+/*** EndHeader */
