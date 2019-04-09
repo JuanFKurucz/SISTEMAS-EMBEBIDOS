@@ -40,17 +40,19 @@ consumir_eventos(Event eventos[]){
 }
 
 //funcion que obtiene a partir de un ano, mes y dia los segundos
-// usando la funcion mktime y la estructura tm para generarla
+//Tiene en cuenta la cantidad de dias del mes y si el ano es bisiesto
 unsigned long convertir_time(char* ano, char* mes, char* dia){
    int numeroAno;
 	int numeroMes;
 	int numeroDia;
-   unsigned long calculo;
    struct tm fecha;
 
-	numeroAno = atoi(ano)-1900;
+	numeroAno = atoi(ano);
 	numeroMes = atoi(mes);
 	numeroDia = atoi(dia);
+	if((int)numeroAno<=0){
+		return -1;
+	}
 	if((int)numeroMes<=0 || (int)numeroMes>12){
 		return -2;
 	}
@@ -63,18 +65,9 @@ unsigned long convertir_time(char* ano, char* mes, char* dia){
    fecha.tm_sec=0;
    fecha.tm_min=0;
    fecha.tm_hour=0;
-   calculo = mktime(&fecha);
-   mktm(&fecha,calculo);
-   if(mktime(&fecha) == calculo){
-   	return calculo;
-   } else {
-    	return -4;
-   }
-}
-
-//Se imprime la fecha sumandole 1900 al año para mostrarlo humanamente
-printTime(struct tm fecha){
-	printf("%d/%d/%d %d:%d:%d",fecha.tm_year+1900,fecha.tm_mon,fecha.tm_mday,fecha.tm_hour,fecha.tm_min,fecha.tm_sec);
+   printf("%d/%d/%d %d:%d:%d",fecha.tm_year,fecha.tm_mon,fecha.tm_mday,fecha.tm_hour,fecha.tm_min,fecha.tm_sec);
+	write_rtc(mktime(&fecha));
+	return 0;
 }
 
 main()
@@ -136,18 +129,17 @@ main()
 					printf("El mes ingresado es incorrecto\n");
 				} else if (time == -3){
 					printf("El dia ingresado es incorrecto\n");
-				} else if(time == -4){
-            	printf("Fecha erronea\n");
-            } else {
-					write_rtc(time);
+				} else if(time >= 0) {
                printf("Fecha actualizada\n");
+				} else {
+					printf("La fecha se va del rango soportado  %ld\n",time);
 				}
 				break;
 				//Para consultar la hora de la placa utilizamos la funcion read_rtc
 				case '2':
                mktm(&fecha,read_rtc());
-            	printTime(fecha);
-            break;
+      			printf("%d/%d/%d %d:%d:%d",fecha.tm_year,fecha.tm_mon,fecha.tm_mday,fecha.tm_hour,fecha.tm_min,fecha.tm_sec);
+				break;
 				case '3':
 				posicion=-1;
 				for(i=0;i<MAX_EVENTOS;i++){
