@@ -55,9 +55,7 @@ unsigned long convertir_time(char* ano, char* mes, char* dia, char* hora, char* 
 
 	numeroAno = atoi(ano)-1900;
 	numeroMes = atoi(mes);
-	printf("el mes: %d",numeroMes);
 	numeroDia = atoi(dia);
-	printf("el dia: %d",numeroDia);
 	numeroHora = atoi(hora);
 	numeroMinuto = atoi(minuto);
 	numeroSegundo = atoi(segundo);
@@ -293,7 +291,9 @@ main()
 	            //y los imprimimos por consola
 	            if(existenEventos(eventos) == 0){
 	               printf("No hay eventos creados\n");
-	            }
+	            } else {
+								mostrarEventos(eventos);	
+							}
 	            break;
 	         default:
 			  		printf("Comando no encontrado");
