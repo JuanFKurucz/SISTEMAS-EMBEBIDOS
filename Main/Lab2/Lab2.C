@@ -94,6 +94,7 @@ printTime(struct tm fecha){
 	printf("%d/%d/%d %d:%d:%d",fecha.tm_year+1900,fecha.tm_mon,fecha.tm_mday,fecha.tm_hour,fecha.tm_min,fecha.tm_sec);
 }
 
+//Funcion que retorna el primer indice vacio que encuentra de la lista de eventos
 int encontrarEspacioParaEvento(Event *eventos){
 	int posicion;
 	int i;
@@ -109,10 +110,14 @@ int encontrarEspacioParaEvento(Event *eventos){
 
 //Funcion que muestra los eventos en pantalla y retorna una lista de
 void mostrarEventos(Event *eventos){
+	struct tm fecha;
 	int i;
 	for(i=0;i<MAX_EVENTOS;i++){
 		if(eventos[i].command != EVENTO_DESHABILITADO){
-			printf("%d: Accion: %c, Bit: %c, Tiempo: %d\n",i,eventos[i].command,eventos[i].param,eventos[i].time);
+			printf("%d: Accion: %c, Bit: %c, Tiempo: ",i,eventos[i].command,eventos[i].param);
+			mktm(&fecha,eventos[i].time);
+			printTime(fecha);
+			printf("\n");
 		}
 	}
 }
@@ -128,6 +133,7 @@ int existenEventos(Event *eventos){
 	return 0;
 }
 
+//Funcion que imprime una pregunta y espera por la respuesta cargando el texto al puntero de char respuesta
 cofunc void hacerPregunta(char *pregunta, char *respuesta){
 	printf(pregunta);
 	printf("\n");
@@ -218,85 +224,85 @@ main()
 			preguntar("Ingrese una opcion",texto);
 			switch(texto[0]){
 				case '1':
-               //Para pasar el sting a time utilizamos la funcion getswf
+					//Para pasar el sting a time utilizamos la funcion getswf
 					//Para fijar la hora del reloj utilizamos la funcion write_rtc
 					wfd ingresarFecha(&time);
-	            if(controlErroresFecha(time) == 1){
-	               write_rtc(time);
-	               printf("Fecha actualizada con exito\n");
-	            }
-	            break;
+					if(controlErroresFecha(time) == 1){
+						write_rtc(time);
+						printf("Fecha actualizada con exito\n");
+					}
+					break;
 				case '2':
-            	//Para consultar la hora de la placa utilizamos la funcion read_rtc
+					//Para consultar la hora de la placa utilizamos la funcion read_rtc
 					mktm(&fecha,read_rtc());
-	            printTime(fecha);
-	            break;
+					printTime(fecha);
+					break;
 				case '3':
-            	i = encontrarEspacioParaEvento(eventos);
-	            //Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
-	            //Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
-	            //verificando que sean correctos y luego lo creamos
-	            //De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
-	            //todos sus datos
-	            if(i==-1){
-	               printf("Capacidad maxima de eventos alcanzada");
-	            } else {
-	               preguntar("Ingrese 1 para prender o ingrese 0 para apagar",texto);
-	               command = texto[0];
+					i = encontrarEspacioParaEvento(eventos);
+					//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
+					//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
+					//verificando que sean correctos y luego lo creamos
+					//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
+					//todos sus datos
+					if(i==-1){
+						printf("Capacidad maxima de eventos alcanzada");
+					} else {
+						preguntar("Ingrese 1 para prender o ingrese 0 para apagar",texto);
+						command = texto[0];
 
-	               preguntar("Ingrese el numero de led",texto);
-	               param = texto[0];
+						preguntar("Ingrese el numero de led",texto);
+						param = texto[0];
 
-	               printf("Se asignara el tiempo del evento ahora:\n");
-	               wfd ingresarFecha(&time);
-	               if(controlErroresFecha(time) == 1){
-	                  // Este if es para controlar los datos que el usuario ingresa
-	                  if((command == '1' || command == '0') && (param>='0' && param <='7')){
-	                     eventos[i].command = command;
-	                     eventos[i].param = param;
-	                     eventos[i].time = time;
-	                  } else {
-	                     printf("Datos erroneos\n");
-	                  }
-	               } else {
-	                  printf("Fecha erronea\n");
-	               }
-	            }
-	            break;
-				case '4':
-            	mostrarEventos(eventos);
-	            if(existenEventos(eventos) == 1){
-	               i=-1;
-	               preguntar("Inserte el indice del evento a eliminar",texto);
-	               i = atoi(texto);
-	               //Controlamos que el usuario no se vaya de rango para eliminar un evento
-	               if(i>=0 && i < MAX_EVENTOS){
-	                  //Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
-	                  if(eventos[i].command != EVENTO_DESHABILITADO){
-	                     eventos[i].command = EVENTO_DESHABILITADO;
-	                     eventos[i].param = 0;
-	                     eventos[i].time = 0;
-	                  } else {
-	                     printf("Este evento no existe\n");
-	                  }
-	               } else {
-	                  printf("El indice se va de rango de la lista de eventos\n");
-	               }
-	            } else {
-	               printf("No hay eventos creados\n");
-	            }
-	            break;
-				case '5':
-            	//Recorremos todos los eventos buscando unicamente los que se encuentren activos
-	            //y los imprimimos por consola
-	            if(existenEventos(eventos) == 0){
-	               printf("No hay eventos creados\n");
-	            } else {
-								mostrarEventos(eventos);	
+						printf("Se asignara el tiempo del evento ahora:\n");
+						wfd ingresarFecha(&time);
+						if(controlErroresFecha(time) == 1){
+							// Este if es para controlar los datos que el usuario ingresa
+							if((command == '1' || command == '0') && (param>='0' && param <='7')){
+								eventos[i].command = command;
+								eventos[i].param = param;
+								eventos[i].time = time;
+							} else {
+								printf("Datos erroneos\n");
 							}
-	            break;
-	         default:
-			  		printf("Comando no encontrado");
+						} else {
+							printf("Fecha erronea\n");
+						}
+					}
+					break;
+				case '4':
+					mostrarEventos(eventos);
+					if(existenEventos(eventos) == 1){
+						i=-1;
+						preguntar("Inserte el indice del evento a eliminar",texto);
+						i = atoi(texto);
+						//Controlamos que el usuario no se vaya de rango para eliminar un evento
+						if(i>=0 && i < MAX_EVENTOS){
+							//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
+							if(eventos[i].command != EVENTO_DESHABILITADO){
+								eventos[i].command = EVENTO_DESHABILITADO;
+								eventos[i].param = 0;
+								eventos[i].time = 0;
+							} else {
+								printf("Este evento no existe\n");
+							}
+						} else {
+							printf("El indice se va de rango de la lista de eventos\n");
+						}
+					} else {
+						printf("No hay eventos creados\n");
+					}
+					break;
+				case '5':
+					//Recorremos todos los eventos buscando unicamente los que se encuentren activos
+					//y los imprimimos por consola
+					if(existenEventos(eventos) == 0){
+						printf("No hay eventos creados\n");
+					} else {
+						mostrarEventos(eventos);
+					}
+					break;
+				default:
+					printf("Comando no encontrado");
 			}
 		}
 	}
