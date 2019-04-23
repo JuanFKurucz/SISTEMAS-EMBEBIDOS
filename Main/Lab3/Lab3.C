@@ -4,6 +4,7 @@
 #define MY_IP_ADDRESS "10.10.6.100"
 #define MY_NETMASK "255.255.255.0"
 #define MY_GATEWAY "10.10.6.2"
+#define MAX_BUFSIZE 2048
 
 
 #memmap xmem
@@ -204,6 +205,49 @@ int controlErroresFecha(unsigned long time){
 	return result;
 }
 
+cofunc int tcp_connect(tcp_Socket *s, int port, char *buf, int * bufferIndex){
+	auto int length, space_avaliable;
+	char tmpBuff[MAX_BUFSIZE];
+	int i;
+	tcp_listen(s, port, 0, 0, NULL, 0);
+	// wait for a connection
+	while((-1 == sock_bytesready(s)) && (0 == sock_established(s)))
+	// give other tasks time to do things while we are waiting
+	yield;
+
+	while(sock_established(s)) {
+		space_avaliable = sock_tbleft(s);
+		if(space_avaliable > (MAX_BUFSIZE-1))
+			space_avaliable = (MAX_BUFSIZE-1);
+
+		// get some data
+		length = sock_fastread(s, tmpBuff, space_avaliable);
+		if(length > 0) { // did we receive any data?
+			tmpBuff[length] = '\0'; // print it to the Stdio window
+			printf("Buffer: %s\nbufferIndex:%d",buf,*bufferIndex);
+			for(i = 0; tmpBuff[i] != '\0'; i++) {
+
+				if(*bufferIndex>MAX_BUFSIZE-1 || tmpBuff[i]==10){
+					printf("Completed: %s",buf);
+               		sock_fastwrite(s, buf, length);
+					memset(buf, 0, MAX_BUFSIZE);
+					*bufferIndex=0;
+					break;
+				}
+				buf[*bufferIndex]=tmpBuff[i];
+				*bufferIndex++;
+			}
+			printf("Buffer: %s\nbufferIndex:%d",buf,*bufferIndex);
+			// send it back out to the user's telnet session
+			// sock_fastwrite will work-we verified the space beforehand
+			//sock_fastwrite(s, buf, length);
+		}
+		yield; // give other tasks time to run
+	}
+	sock_close(s);
+	return 1;
+}
+
 main()
 {
 	struct tm fecha;
@@ -213,7 +257,8 @@ main()
 	char param;
 	int i; //Posicion de indice, usada para fors y obtencion de posiciones con funciones
 	unsigned long time;
-	char buffer[2048];
+	char buffer[MAX_BUFSIZE];
+  	int bufferIndex;
 	int status;
 
 	HW_init();
@@ -232,35 +277,14 @@ main()
 			waitfor(DelayMs(800));
 		}
 
-		costate{
-			tcp_listen(&echosock,PORT,0,0,NULL,0);
-         sock_yield(&echosock, &status);
-			sock_wait_established(&echosock,sock_delay,NULL,&status)
-      	printf("Conectado\n");
-	      sock_mode(&echosock,TCP_MODE_ASCII);
-
+		costate {
+			// Go do the TCP/IP part, on the first socket
+			wfd tcp_connect(&echosock, PORT, buffer, &bufferIndex);
+			printf("%s",buffer);
 		}
-		costate{
-			if(tcp_tick(&echosock))
-			{
-				sock_wait_input(&echosock,0,NULL,&status);
-				if(sock_gets(&echosock,buffer,2048))
-				{
-					sock_puts(&echosock,buffer);
-				}
-			}
-		}
-		costate{
-			sock_err:
-			switch(status)
-			{
-				case 1: /* foreign host closed */
-				printf("User closed session\n");
-				break;
-				case -1: /* time-out */
-				printf("Connection timed out\n");
-				break;
-			}
+		costate {
+			// drive the tcp stack
+			tcp_tick(NULL);
 		}
 
 		costate{
@@ -275,87 +299,88 @@ main()
 			printf("Ingrese 4 para Quitar un evento de calendario.\n");
 			printf("Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
 			preguntar("Ingrese una opcion",texto);
+			printf("continue\n");
 			switch(texto[0]){
 				case '1':
-				//Para pasar el sting a time utilizamos la funcion getswf
-				//Para fijar la hora del reloj utilizamos la funcion write_rtc
-				wfd ingresarFecha(&time);
-				if(controlErroresFecha(time) == 1){
-					write_rtc(time);
-					printf("Fecha actualizada con exito\n");
-				}
-				break;
-				case '2':
-				//Para consultar la hora de la placa utilizamos la funcion read_rtc
-				mktm(&fecha,read_rtc());
-				printTime(fecha);
-				break;
-				case '3':
-				i = encontrarEspacioParaEvento(eventos);
-				//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
-				//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
-				//verificando que sean correctos y luego lo creamos
-				//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
-				//todos sus datos
-				if(i==-1){
-					printf("Capacidad maxima de eventos alcanzada");
-				} else {
-					preguntar("Ingrese 1 para prender o ingrese 0 para apagar",texto);
-					command = texto[0];
-
-					preguntar("Ingrese el numero de led",texto);
-					param = texto[0];
-
-					printf("Se asignara el tiempo del evento ahora:\n");
+					//Para pasar el sting a time utilizamos la funcion getswf
+					//Para fijar la hora del reloj utilizamos la funcion write_rtc
 					wfd ingresarFecha(&time);
 					if(controlErroresFecha(time) == 1){
-						// Este if es para controlar los datos que el usuario ingresa
-						if((command == '1' || command == '0') && (param>='0' && param <='7')){
-							eventos[i].command = command;
-							eventos[i].param = param;
-							eventos[i].time = time;
-						} else {
-							printf("Datos erroneos\n");
-						}
-					} else {
-						printf("Fecha erronea\n");
+						write_rtc(time);
+						printf("Fecha actualizada con exito\n");
 					}
-				}
-				break;
+					break;
+				case '2':
+					//Para consultar la hora de la placa utilizamos la funcion read_rtc
+					mktm(&fecha,read_rtc());
+					printTime(fecha);
+					break;
+				case '3':
+					i = encontrarEspacioParaEvento(eventos);
+					//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
+					//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
+					//verificando que sean correctos y luego lo creamos
+					//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
+					//todos sus datos
+					if(i==-1){
+						printf("Capacidad maxima de eventos alcanzada");
+					} else {
+						preguntar("Ingrese 1 para prender o ingrese 0 para apagar",texto);
+						command = texto[0];
+
+						preguntar("Ingrese el numero de led",texto);
+						param = texto[0];
+
+						printf("Se asignara el tiempo del evento ahora:\n");
+						wfd ingresarFecha(&time);
+						if(controlErroresFecha(time) == 1){
+							// Este if es para controlar los datos que el usuario ingresa
+							if((command == '1' || command == '0') && (param>='0' && param <='7')){
+								eventos[i].command = command;
+								eventos[i].param = param;
+								eventos[i].time = time;
+							} else {
+								printf("Datos erroneos\n");
+							}
+						} else {
+							printf("Fecha erronea\n");
+						}
+					}
+					break;
 				case '4':
-				mostrarEventos(eventos);
-				if(existenEventos(eventos) == 1){
-					i=-1;
-					preguntar("Inserte el indice del evento a eliminar",texto);
-					i = atoi(texto);
-					//Controlamos que el usuario no se vaya de rango para eliminar un evento
-					if(i>=0 && i < MAX_EVENTOS){
-						//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
-						if(eventos[i].command != EVENTO_DESHABILITADO){
-							eventos[i].command = EVENTO_DESHABILITADO;
-							eventos[i].param = 0;
-							eventos[i].time = 0;
+					mostrarEventos(eventos);
+					if(existenEventos(eventos) == 1){
+						i=-1;
+						preguntar("Inserte el indice del evento a eliminar",texto);
+						i = atoi(texto);
+						//Controlamos que el usuario no se vaya de rango para eliminar un evento
+						if(i>=0 && i < MAX_EVENTOS){
+							//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
+							if(eventos[i].command != EVENTO_DESHABILITADO){
+								eventos[i].command = EVENTO_DESHABILITADO;
+								eventos[i].param = 0;
+								eventos[i].time = 0;
+							} else {
+								printf("Este evento no existe\n");
+							}
 						} else {
-							printf("Este evento no existe\n");
+							printf("El indice se va de rango de la lista de eventos\n");
 						}
 					} else {
-						printf("El indice se va de rango de la lista de eventos\n");
+						printf("No hay eventos creados\n");
 					}
-				} else {
-					printf("No hay eventos creados\n");
-				}
-				break;
+					break;
 				case '5':
-				//Recorremos todos los eventos buscando unicamente los que se encuentren activos
-				//y los imprimimos por consola
-				if(existenEventos(eventos) == 0){
-					printf("No hay eventos creados\n");
-				} else {
-					mostrarEventos(eventos);
-				}
-				break;
+					//Recorremos todos los eventos buscando unicamente los que se encuentren activos
+					//y los imprimimos por consola
+					if(existenEventos(eventos) == 0){
+						printf("No hay eventos creados\n");
+					} else {
+						mostrarEventos(eventos);
+					}
+					break;
 				default:
-				printf("Comando no encontrado");
+					printf("Comando no encontrado");
 			}
 		}
 	}
