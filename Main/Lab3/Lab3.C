@@ -22,7 +22,7 @@ tcp_Socket echosock;
 #define MAX_EVENTOS 10
 #define MAX_TEXTO 10
 #define EVENTO_DESHABILITADO 0xFF
-#define preguntar(p,r) wfd hacerPregunta(p,r)
+#define preguntar(p,r,i) wfd hacerPregunta(p,r,i)
 
 // Definimos los eventos
 typedef struct Events{
@@ -30,6 +30,15 @@ typedef struct Events{
 	char param;
 	unsigned long time;
 } Event;
+
+
+void imprimir(int tipo, char *s){
+	if(tipo == 1){
+		sock_fastwrite(&echosock, s, sizeof(s));
+	} else {
+   	printf(s);
+   }
+}
 
 // Funcion que inicializa los eventos con los valores time, param en 0 y command en EVENTO_DESHABILITADO
 iniciar_eventos(Event eventos[]){
@@ -107,8 +116,35 @@ unsigned long convertir_time(char* ano, char* mes, char* dia, char* hora, char* 
 }
 
 //Se imprime la fecha sumandole 1900 al a�o para mostrarlo humanamente
-printTime(struct tm fecha){
-	printf("%d/%d/%d %d:%d:%d",fecha.tm_year+1900,fecha.tm_mon,fecha.tm_mday,fecha.tm_hour,fecha.tm_min,fecha.tm_sec);
+printTime(struct tm fecha,int tipo){
+	char respuesta[1];
+   char ano[4];
+   char mes[2];
+   char dia[2];
+   char hora[2];
+   char minuto[2];
+   char segundo[2];
+
+   itoa(fecha.tm_year+1900,ano);
+   itoa(fecha.tm_mon,mes);
+   itoa(fecha.tm_mday,dia);
+   itoa(fecha.tm_hour,hora);
+   itoa(fecha.tm_min,minuto);
+   itoa(fecha.tm_sec,segundo);
+
+   strcat(respuesta,ano);
+   strcat(respuesta,"/");
+   strcat(respuesta,mes);
+   strcat(respuesta,"/");
+   strcat(respuesta,dia);
+   strcat(respuesta," ");
+   strcat(respuesta,hora);
+   strcat(respuesta,":");
+   strcat(respuesta,minuto);
+   strcat(respuesta,":");
+   strcat(respuesta,segundo);
+
+   imprimir(tipo,respuesta);
 }
 
 //Funcion que retorna el primer indice vacio que encuentra de la lista de eventos
@@ -126,15 +162,15 @@ int encontrarEspacioParaEvento(Event *eventos){
 }
 
 //Funcion que muestra los eventos en pantalla y retorna una lista de
-void mostrarEventos(Event *eventos){
+void mostrarEventos(Event *eventos,int tipo){
 	struct tm fecha;
 	int i;
 	for(i=0;i<MAX_EVENTOS;i++){
 		if(eventos[i].command != EVENTO_DESHABILITADO){
-			printf("%d: Accion: %c, Bit: %c, Tiempo: ",i,eventos[i].command,eventos[i].param);
+			imprimir(tipo,"%d: Accion: %c, Bit: %c, Tiempo: ",i,eventos[i].command,eventos[i].param);
 			mktm(&fecha,eventos[i].time);
-			printTime(fecha);
-			printf("\n");
+			printTime(fecha,tipo);
+			imprimir(tipo,"\n");
 		}
 	}
 }
@@ -151,15 +187,14 @@ int existenEventos(Event *eventos){
 }
 
 //Funcion que imprime una pregunta y espera por la respuesta cargando el texto al puntero de char respuesta
-cofunc void hacerPregunta(char *pregunta, char *respuesta){
-	printf(pregunta);
-	printf("\n");
+cofunc void hacerPregunta(char *pregunta, char *respuesta, int tipo){
+	imprimir(tipo,pregunta);
+	imprimir(tipo,"\n");
 	waitfor(getswf(respuesta));
-	return;
 }
 
 //Funcion encargada de pedir al usuario ingresar una fecha
-cofunc void ingresarFecha(unsigned long *time){
+cofunc void ingresarFecha(unsigned long *time, int tipo){
 	char ano[MAX_TEXTO];
 	char mes[MAX_TEXTO];
 	char dia[MAX_TEXTO];
@@ -167,12 +202,12 @@ cofunc void ingresarFecha(unsigned long *time){
 	char minuto[MAX_TEXTO];
 	char segundo[MAX_TEXTO];
 
-	preguntar("Ingrese el ano",ano);
-	preguntar("Ingrese el mes",mes);
-	preguntar("Ingrese el dia",dia);
-	preguntar("Ingrese la hora",hora);
-	preguntar("Ingrese los minutos",minuto);
-	preguntar("Ingrese los segundos",segundo);
+	preguntar("Ingrese el ano",ano,tipo);
+	preguntar("Ingrese el mes",mes,tipo);
+	preguntar("Ingrese el dia",dia,tipo);
+	preguntar("Ingrese la hora",hora,tipo);
+	preguntar("Ingrese los minutos",minuto,tipo);
+	preguntar("Ingrese los segundos",segundo,tipo);
 
 	*time = convertir_time(ano, mes, dia, hora, minuto, segundo);
 	return;
@@ -180,41 +215,47 @@ cofunc void ingresarFecha(unsigned long *time){
 
 //Funcion encargada de mostrar en pantalla el control de errores de la funcion convertir_time
 //retorna 0 si hay un fallo retorna 1 si esta bien
-int controlErroresFecha(unsigned long time){
+int controlErroresFecha(unsigned long time, int tipo){
 	int result;
 	result = 0;
 	if(time == -1){
-		printf("El ano ingresado es incorrecto\n");
+		imprimir(tipo,"El ano ingresado es incorrecto\n");
 	} else if(time == -2){
-		printf("El mes ingresado es incorrecto\n");
+		imprimir(tipo,"El mes ingresado es incorrecto\n");
 	} else if(time == -3){
-		printf("El dia ingresado es incorrecto\n");
+		imprimir(tipo,"El dia ingresado es incorrecto\n");
 	} else if(time == -4){
-		printf("Fecha erronea\n");
+		imprimir(tipo,"Fecha erronea\n");
 	} else if(time == -5){
-		printf("La hora ingresada es incorrecta\n");
+		imprimir(tipo,"La hora ingresada es incorrecta\n");
 	} else if(time == -6){
-		printf("Los minutos ingresados son incorrectos\n");
+		imprimir(tipo,"Los minutos ingresados son incorrectos\n");
 	} else if(time == -7){
-		printf("Los segundos ingresados son incorrectos\n");
+		imprimir(tipo,"Los segundos ingresados son incorrectos\n");
 	} else if(time<0){
-		printf("Fecha incorrecta\n");
+		imprimir(tipo,"Fecha incorrecta\n");
 	} else {
 		result = 1;
 	}
 	return result;
 }
-
-cofunc int tcp_connect(tcp_Socket *s, int port, char *buf, int * bufferIndex){
+/*
+memset(buf, 0, MAX_BUFSIZE);
+bufferIndex=0;
+break;
+*/
+cofunc int tcp_connect(tcp_Socket *s, int port){
 	auto int length, space_avaliable;
 	char tmpBuff[MAX_BUFSIZE];
 	int i;
+	char buf[MAX_BUFSIZE];
+  	int bufferIndex;
+   bufferIndex=0;
 	tcp_listen(s, port, 0, 0, NULL, 0);
 	// wait for a connection
 	while((-1 == sock_bytesready(s)) && (0 == sock_established(s)))
 	// give other tasks time to do things while we are waiting
 	yield;
-
 	while(sock_established(s)) {
 		space_avaliable = sock_tbleft(s);
 		if(space_avaliable > (MAX_BUFSIZE-1))
@@ -224,20 +265,16 @@ cofunc int tcp_connect(tcp_Socket *s, int port, char *buf, int * bufferIndex){
 		length = sock_fastread(s, tmpBuff, space_avaliable);
 		if(length > 0) { // did we receive any data?
 			tmpBuff[length] = '\0'; // print it to the Stdio window
-			printf("Buffer: %s\nbufferIndex:%d",buf,*bufferIndex);
 			for(i = 0; tmpBuff[i] != '\0'; i++) {
-
-				if(*bufferIndex>MAX_BUFSIZE-1 || tmpBuff[i]==10){
-					printf("Completed: %s",buf);
-               		sock_fastwrite(s, buf, length);
-					memset(buf, 0, MAX_BUFSIZE);
-					*bufferIndex=0;
-					break;
-				}
-				buf[*bufferIndex]=tmpBuff[i];
-				*bufferIndex++;
+				if(bufferIndex>MAX_BUFSIZE-1 || tmpBuff[i]==10){
+               sock_fastwrite(s, buf, bufferIndex+1);
+               break;
+            } else {
+					buf[bufferIndex]=tmpBuff[i];
+			  		bufferIndex++;
+            }
 			}
-			printf("Buffer: %s\nbufferIndex:%d",buf,*bufferIndex);
+         //printf("%s",buf);
 			// send it back out to the user's telnet session
 			// sock_fastwrite will work-we verified the space beforehand
 			//sock_fastwrite(s, buf, length);
@@ -248,18 +285,109 @@ cofunc int tcp_connect(tcp_Socket *s, int port, char *buf, int * bufferIndex){
 	return 1;
 }
 
-main()
-{
-	struct tm fecha;
-	Event eventos[MAX_EVENTOS];
-	char texto[MAX_TEXTO];
+
+cofunc void menu(char *texto, Event *eventos, int tipo){
+   struct tm fecha;
 	char command;
 	char param;
 	int i; //Posicion de indice, usada para fors y obtencion de posiciones con funciones
 	unsigned long time;
-	char buffer[MAX_BUFSIZE];
-  	int bufferIndex;
 	int status;
+   imprimir(tipo,"\nIngrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
+	imprimir(tipo,"Ingrese 2 para Consultar la hora del RTC del Rabbi\n");
+ 	imprimir(tipo,"Ingrese 3 para Agregar un evento de calendario.\n");
+	imprimir(tipo,"Ingrese 4 para Quitar un evento de calendario.\n");
+	imprimir(tipo,"Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
+	preguntar("Ingrese una opcion",texto,tipo);
+	imprimir(tipo,"continue\n");
+	 switch(texto[0]){
+	    case '1':
+	       //Para pasar el sting a time utilizamos la funcion getswf
+	       //Para fijar la hora del reloj utilizamos la funcion write_rtc
+	       wfd ingresarFecha(&time,tipo);
+	       if(controlErroresFecha(time,tipo) == 1){
+	          write_rtc(time);
+	          imprimir(tipo,"Fecha actualizada con exito\n");
+	       }
+	       break;
+	    case '2':
+	       //Para consultar la hora de la placa utilizamos la funcion read_rtc
+	       mktm(&fecha,read_rtc());
+	       printTime(fecha,tipo);
+	       break;
+	    case '3':
+	       i = encontrarEspacioParaEvento(eventos);
+	       //Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
+	       //Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
+	       //verificando que sean correctos y luego lo creamos
+	       //De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
+	       //todos sus datos
+	       if(i==-1){
+	          imprimir(tipo,"Capacidad maxima de eventos alcanzada");
+	       } else {
+	          preguntar("Ingrese 1 para prender o ingrese 0 para apagar",texto,tipo);
+	          command = texto[0];
+
+	          preguntar("Ingrese el numero de led",texto,tipo);
+	          param = texto[0];
+
+	          imprimir(tipo,"Se asignara el tiempo del evento ahora:\n");
+	          wfd ingresarFecha(&time,tipo);
+	          if(controlErroresFecha(time,tipo) == 1){
+	             // Este if es para controlar los datos que el usuario ingresa
+	             if((command == '1' || command == '0') && (param>='0' && param <='7')){
+	                eventos[i].command = command;
+	                eventos[i].param = param;
+	                eventos[i].time = time;
+	             } else {
+	                imprimir(tipo,"Datos erroneos\n");
+	             }
+	          } else {
+	             imprimir(tipo,"Fecha erronea\n");
+	          }
+	       }
+	       break;
+	    case '4':
+	       mostrarEventos(eventos,tipo);
+	       if(existenEventos(eventos) == 1){
+	          i=-1;
+	          preguntar("Inserte el indice del evento a eliminar",texto,tipo);
+	          i = atoi(texto);
+	          //Controlamos que el usuario no se vaya de rango para eliminar un evento
+	          if(i>=0 && i < MAX_EVENTOS){
+	             //Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
+	             if(eventos[i].command != EVENTO_DESHABILITADO){
+	                eventos[i].command = EVENTO_DESHABILITADO;
+	                eventos[i].param = 0;
+	                eventos[i].time = 0;
+	             } else {
+	                imprimir(tipo,"Este evento no existe\n");
+	             }
+	          } else {
+	             imprimir(tipo,"El indice se va de rango de la lista de eventos\n");
+	          }
+	       } else {
+	          imprimir(tipo,"No hay eventos creados\n");
+	       }
+	       break;
+	    case '5':
+	       //Recorremos todos los eventos buscando unicamente los que se encuentren activos
+	       //y los imprimimos por consola
+	       if(existenEventos(eventos) == 0){
+	          imprimir(tipo,"No hay eventos creados\n");
+	       } else {
+	          mostrarEventos(eventos,tipo);
+	       }
+	       break;
+	    default:
+	       imprimir(tipo,"Comando no encontrado");
+	 }
+}
+main()
+{
+	Event eventos[MAX_EVENTOS];
+	char texto[MAX_TEXTO];
+
 
 	HW_init();
 	iniciar_eventos(eventos);
@@ -279,8 +407,7 @@ main()
 
 		costate {
 			// Go do the TCP/IP part, on the first socket
-			wfd tcp_connect(&echosock, PORT, buffer, &bufferIndex);
-			printf("%s",buffer);
+         wfd tcp_connect(&echosock, PORT);
 		}
 		costate {
 			// drive the tcp stack
@@ -292,97 +419,12 @@ main()
 		}
 
 		//En este costate tenemos un menu para el usuario, con un switch y los diferentes casos posibles
-		costate{
-			printf("\nIngrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
-			printf("Ingrese 2 para Consultar la hora del RTC del Rabbi\n");
-			printf("Ingrese 3 para Agregar un evento de calendario.\n");
-			printf("Ingrese 4 para Quitar un evento de calendario.\n");
-			printf("Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
-			preguntar("Ingrese una opcion",texto);
-			printf("continue\n");
-			switch(texto[0]){
-				case '1':
-					//Para pasar el sting a time utilizamos la funcion getswf
-					//Para fijar la hora del reloj utilizamos la funcion write_rtc
-					wfd ingresarFecha(&time);
-					if(controlErroresFecha(time) == 1){
-						write_rtc(time);
-						printf("Fecha actualizada con exito\n");
-					}
-					break;
-				case '2':
-					//Para consultar la hora de la placa utilizamos la funcion read_rtc
-					mktm(&fecha,read_rtc());
-					printTime(fecha);
-					break;
-				case '3':
-					i = encontrarEspacioParaEvento(eventos);
-					//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
-					//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
-					//verificando que sean correctos y luego lo creamos
-					//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
-					//todos sus datos
-					if(i==-1){
-						printf("Capacidad maxima de eventos alcanzada");
-					} else {
-						preguntar("Ingrese 1 para prender o ingrese 0 para apagar",texto);
-						command = texto[0];
-
-						preguntar("Ingrese el numero de led",texto);
-						param = texto[0];
-
-						printf("Se asignara el tiempo del evento ahora:\n");
-						wfd ingresarFecha(&time);
-						if(controlErroresFecha(time) == 1){
-							// Este if es para controlar los datos que el usuario ingresa
-							if((command == '1' || command == '0') && (param>='0' && param <='7')){
-								eventos[i].command = command;
-								eventos[i].param = param;
-								eventos[i].time = time;
-							} else {
-								printf("Datos erroneos\n");
-							}
-						} else {
-							printf("Fecha erronea\n");
-						}
-					}
-					break;
-				case '4':
-					mostrarEventos(eventos);
-					if(existenEventos(eventos) == 1){
-						i=-1;
-						preguntar("Inserte el indice del evento a eliminar",texto);
-						i = atoi(texto);
-						//Controlamos que el usuario no se vaya de rango para eliminar un evento
-						if(i>=0 && i < MAX_EVENTOS){
-							//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
-							if(eventos[i].command != EVENTO_DESHABILITADO){
-								eventos[i].command = EVENTO_DESHABILITADO;
-								eventos[i].param = 0;
-								eventos[i].time = 0;
-							} else {
-								printf("Este evento no existe\n");
-							}
-						} else {
-							printf("El indice se va de rango de la lista de eventos\n");
-						}
-					} else {
-						printf("No hay eventos creados\n");
-					}
-					break;
-				case '5':
-					//Recorremos todos los eventos buscando unicamente los que se encuentren activos
-					//y los imprimimos por consola
-					if(existenEventos(eventos) == 0){
-						printf("No hay eventos creados\n");
-					} else {
-						mostrarEventos(eventos);
-					}
-					break;
-				default:
-					printf("Comando no encontrado");
-			}
+      costate{
+        wfd menu(texto,eventos,0);
 		}
+      /*costate{
+        wfd menu(&buffer,);
+		} */
 	}
 
 }
