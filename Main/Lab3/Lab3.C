@@ -34,9 +34,9 @@ typedef struct Events{
 
 void imprimir(int tipo, char *s){
 	if(tipo == 1){
-		sock_fastwrite(&echosock, s, sizeof(s));
+		sock_fastwrite(&echosock, s, 100);//sizeof(s));
 	} else {
-   	printf(s);
+   	printf("%s",s);
    }
 }
 
@@ -50,18 +50,27 @@ iniciar_eventos(Event eventos[]){
 	}
 }
 
+void borrar_evento(Event *evento){
+	(*evento).command = EVENTO_DESHABILITADO;
+	(*evento).param = 0;
+	(*evento).time = 0;
+}
+
 // Funcion que corre durante toda la ejecucion de nuestro programa,
 // buscando eventos que esten activos para ejecutarlos en el tiempo correspondiete
 // Nuestros eventos se activan una vez que command deja de ser EVENTO_DESHABILITADO
 consumir_eventos(Event eventos[]){
 	int i;
+	unsigned long timeNow;
+	timeNow = read_rtc();
 	for(i=0;i<MAX_EVENTOS;i++){
-		if(eventos[i].command != EVENTO_DESHABILITADO && eventos[i].time == read_rtc()){
+		if(eventos[i].command != EVENTO_DESHABILITADO && eventos[i].time == timeNow){
 			if(eventos[i].command=='1'){
 				LED_SET(eventos[i].param);
 			} else {
 				LED_RESET(eventos[i].param);
 			}
+			borrar_evento(&eventos[i]);
 		}
 	}
 }
@@ -108,7 +117,7 @@ unsigned long convertir_time(char* ano, char* mes, char* dia, char* hora, char* 
 	fecha.tm_sec = numeroSegundo;
 	calculo = mktime(&fecha);
 	mktm(&fechaCheck,calculo);
-	if(fecha.tm_mon == fechaCheck.tm_mon && fecha.tm_mday == fechaCheck.tm_mday && fecha.tm_year == fechaCheck.tm_year){
+	if(memcmp(&fecha,&fechaCheck,0)==0){
 		return calculo;
 	} else {
 		return -4;
@@ -116,67 +125,48 @@ unsigned long convertir_time(char* ano, char* mes, char* dia, char* hora, char* 
 }
 
 //Se imprime la fecha sumandole 1900 al a�o para mostrarlo humanamente
-printTime(struct tm fecha,int tipo){
-	char respuesta[1];
-   char ano[4];
-   char mes[2];
-   char dia[2];
-   char hora[2];
-   char minuto[2];
-   char segundo[2];
-
-   itoa(fecha.tm_year+1900,ano);
-   itoa(fecha.tm_mon,mes);
-   itoa(fecha.tm_mday,dia);
-   itoa(fecha.tm_hour,hora);
-   itoa(fecha.tm_min,minuto);
-   itoa(fecha.tm_sec,segundo);
-
-   strcat(respuesta,ano);
-   strcat(respuesta,"/");
-   strcat(respuesta,mes);
-   strcat(respuesta,"/");
-   strcat(respuesta,dia);
-   strcat(respuesta," ");
-   strcat(respuesta,hora);
-   strcat(respuesta,":");
-   strcat(respuesta,minuto);
-   strcat(respuesta,":");
-   strcat(respuesta,segundo);
-
+void printTime(struct tm *fecha,int tipo){
+	char respuesta[20];
+   sprintf(respuesta,"%d/%d/%d %d:%d:%d",
+		(*fecha).tm_year+1900,
+		(*fecha).tm_mon,
+		(*fecha).tm_mday,
+		(*fecha).tm_hour,
+		(*fecha).tm_min,
+		(*fecha).tm_sec
+	);
    imprimir(tipo,respuesta);
 }
 
 //Funcion que retorna el primer indice vacio que encuentra de la lista de eventos
-int encontrarEspacioParaEvento(Event *eventos){
-	int posicion;
-	int i;
-	posicion=-1;
-	for(i=0;i<MAX_EVENTOS;i++){
+char encontrarEspacioParaEvento(Event *eventos){
+   int i;
+   for(i=0;i<MAX_EVENTOS;i++){
 		if(eventos[i].command == EVENTO_DESHABILITADO){
-			posicion=i;
-			break;
+         return i;
 		}
 	}
-	return posicion;
+	return -1;
 }
 
 //Funcion que muestra los eventos en pantalla y retorna una lista de
 void mostrarEventos(Event *eventos,int tipo){
 	struct tm fecha;
 	int i;
+   char buffer[100];
 	for(i=0;i<MAX_EVENTOS;i++){
 		if(eventos[i].command != EVENTO_DESHABILITADO){
-			imprimir(tipo,"%d: Accion: %c, Bit: %c, Tiempo: ",i,eventos[i].command,eventos[i].param);
+         sprintf(buffer,"%d: Accion: %c, Bit: %c, Tiempo: ",i,eventos[i].command,eventos[i].param);
+         imprimir(tipo,buffer);
 			mktm(&fecha,eventos[i].time);
-			printTime(fecha,tipo);
+			printTime(&fecha,tipo);
 			imprimir(tipo,"\n");
 		}
 	}
 }
 
 //Funcion encarga de chequear si existe un evento creado
-int existenEventos(Event *eventos){
+char existenEventos(Event *eventos){
 	int i;
 	for(i=0;i<MAX_EVENTOS;i++){
 		if(eventos[i].command != EVENTO_DESHABILITADO){
@@ -239,52 +229,14 @@ int controlErroresFecha(unsigned long time, int tipo){
 	}
 	return result;
 }
-/*
-memset(buf, 0, MAX_BUFSIZE);
-bufferIndex=0;
-break;
-*/
-cofunc int tcp_connect(tcp_Socket *s, int port){
-	auto int length, space_avaliable;
-	char tmpBuff[MAX_BUFSIZE];
-	int i;
-	char buf[MAX_BUFSIZE];
-  	int bufferIndex;
-   bufferIndex=0;
-	tcp_listen(s, port, 0, 0, NULL, 0);
-	// wait for a connection
-	while((-1 == sock_bytesready(s)) && (0 == sock_established(s)))
-	// give other tasks time to do things while we are waiting
-	yield;
-	while(sock_established(s)) {
-		space_avaliable = sock_tbleft(s);
-		if(space_avaliable > (MAX_BUFSIZE-1))
-			space_avaliable = (MAX_BUFSIZE-1);
 
-		// get some data
-		length = sock_fastread(s, tmpBuff, space_avaliable);
-		if(length > 0) { // did we receive any data?
-			tmpBuff[length] = '\0'; // print it to the Stdio window
-			for(i = 0; tmpBuff[i] != '\0'; i++) {
-				if(bufferIndex>MAX_BUFSIZE-1 || tmpBuff[i]==10){
-               sock_fastwrite(s, buf, bufferIndex+1);
-               break;
-            } else {
-					buf[bufferIndex]=tmpBuff[i];
-			  		bufferIndex++;
-            }
-			}
-         //printf("%s",buf);
-			// send it back out to the user's telnet session
-			// sock_fastwrite will work-we verified the space beforehand
-			//sock_fastwrite(s, buf, length);
-		}
-		yield; // give other tasks time to run
-	}
-	sock_close(s);
-	return 1;
+void imprimirMenu(int tipo){
+  imprimir(tipo,"Ingrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
+  imprimir(tipo,"Ingrese 2 para Consultar la hora del RTC del Rabbi\n");
+  imprimir(tipo,"Ingrese 3 para Agregar un evento de calendario.\n");
+  imprimir(tipo,"Ingrese 4 para Quitar un evento de calendario.\n");
+  imprimir(tipo,"Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
 }
-
 
 cofunc void menu(char *texto, Event *eventos, int tipo){
    struct tm fecha;
@@ -293,13 +245,8 @@ cofunc void menu(char *texto, Event *eventos, int tipo){
 	int i; //Posicion de indice, usada para fors y obtencion de posiciones con funciones
 	unsigned long time;
 	int status;
-   imprimir(tipo,"\nIngrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
-	imprimir(tipo,"Ingrese 2 para Consultar la hora del RTC del Rabbi\n");
- 	imprimir(tipo,"Ingrese 3 para Agregar un evento de calendario.\n");
-	imprimir(tipo,"Ingrese 4 para Quitar un evento de calendario.\n");
-	imprimir(tipo,"Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
-	preguntar("Ingrese una opcion",texto,tipo);
-	imprimir(tipo,"continue\n");
+   imprimirMenu(tipo);
+   preguntar("Ingrese una opcion",texto,tipo);
 	 switch(texto[0]){
 	    case '1':
 	       //Para pasar el sting a time utilizamos la funcion getswf
@@ -313,7 +260,7 @@ cofunc void menu(char *texto, Event *eventos, int tipo){
 	    case '2':
 	       //Para consultar la hora de la placa utilizamos la funcion read_rtc
 	       mktm(&fecha,read_rtc());
-	       printTime(fecha,tipo);
+	       printTime(&fecha,tipo);
 	       break;
 	    case '3':
 	       i = encontrarEspacioParaEvento(eventos);
@@ -357,9 +304,7 @@ cofunc void menu(char *texto, Event *eventos, int tipo){
 	          if(i>=0 && i < MAX_EVENTOS){
 	             //Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
 	             if(eventos[i].command != EVENTO_DESHABILITADO){
-	                eventos[i].command = EVENTO_DESHABILITADO;
-	                eventos[i].param = 0;
-	                eventos[i].time = 0;
+						borrar_evento(&eventos[i]);
 	             } else {
 	                imprimir(tipo,"Este evento no existe\n");
 	             }
@@ -383,11 +328,61 @@ cofunc void menu(char *texto, Event *eventos, int tipo){
 	       imprimir(tipo,"Comando no encontrado");
 	 }
 }
+
+
+/*
+memset(buf, 0, MAX_BUFSIZE);
+bufferIndex=0;
+break;
+*/
+cofunc int tcp_connect(tcp_Socket *s, int port, Event *eventos){
+	auto int length, space_avaliable;
+	char tmpBuff[MAX_BUFSIZE];
+   char buf[MAX_BUFSIZE];
+	int i;
+  	int bufferIndex;
+   bufferIndex=0;
+	tcp_listen(s, port, 0, 0, NULL, 0);
+	// wait for a connection
+	while((-1 == sock_bytesready(s)) && (0 == sock_established(s)))
+	// give other tasks time to do things while we are waiting
+	yield;
+
+   imprimirMenu(1);
+	while(sock_established(s)) {
+		space_avaliable = sock_tbleft(s);
+		if(space_avaliable > (MAX_BUFSIZE-1))
+			space_avaliable = (MAX_BUFSIZE-1);
+
+		// get some data
+		length = sock_fastread(s, tmpBuff, space_avaliable);
+		if(length > 0) { // did we receive any data?
+			tmpBuff[length] = '\0'; // print it to the Stdio window
+			for(i = 0; tmpBuff[i] != '\0'; i++) {
+				if(bufferIndex>MAX_BUFSIZE-1 || tmpBuff[i]==10){
+               sock_fastwrite(s, buf, bufferIndex);
+
+               break;
+            } else {
+					buf[bufferIndex]=tmpBuff[i];
+			  		bufferIndex++;
+            }
+			}
+         //printf("%s",buf);
+			// send it back out to the user's telnet session
+			// sock_fastwrite will work-we verified the space beforehand
+			//sock_fastwrite(s, buf, length);
+		}
+    	yield; // give other tasks time to run
+	}
+	sock_close(s);
+	return 1;
+}
+
 main()
 {
 	Event eventos[MAX_EVENTOS];
 	char texto[MAX_TEXTO];
-
 
 	HW_init();
 	iniciar_eventos(eventos);
@@ -407,7 +402,7 @@ main()
 
 		costate {
 			// Go do the TCP/IP part, on the first socket
-         wfd tcp_connect(&echosock, PORT);
+         wfd tcp_connect(&echosock, PORT, eventos);
 		}
 		costate {
 			// drive the tcp stack
@@ -420,11 +415,8 @@ main()
 
 		//En este costate tenemos un menu para el usuario, con un switch y los diferentes casos posibles
       costate{
-        wfd menu(texto,eventos,0);
+     		wfd menu(texto,eventos,0);
 		}
-      /*costate{
-        wfd menu(&buffer,);
-		} */
 	}
 
 }
