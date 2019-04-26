@@ -34,7 +34,7 @@ typedef struct Events{
 
 void imprimir(int tipo, char *s){
 	if(tipo == 1){
-		sock_fastwrite(&echosock, s, 100);//sizeof(s));
+		sock_fastwrite(&echosock, s, strlen(s));
 	} else {
    	printf("%s",s);
    }
