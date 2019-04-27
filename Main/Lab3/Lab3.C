@@ -195,11 +195,11 @@ cofunc void ingresarFecha(unsigned long *time, int tipo){
 	char segundo[MAX_TEXTO];
 
 	preguntar("Ingrese el ano",ano,tipo);
-	preguntar("Ingrese el mes",mes,tipo);
-	preguntar("Ingrese el dia",dia,tipo);
+	preguntar("Ingrese el mes (Se espera un num entre 1 y 12)",mes,tipo);
+	preguntar("Ingrese el dia (Se espera un num entre 1 y 31)",dia,tipo);
 	preguntar("Ingrese la hora",hora,tipo);
-	preguntar("Ingrese los minutos",minuto,tipo);
-	preguntar("Ingrese los segundos",segundo,tipo);
+	preguntar("Ingrese los minutos (Se espera un num entre 1 y 59)",minuto,tipo);
+	preguntar("Ingrese los segundos (Se espera un num entre 1 y 59)",segundo,tipo);
 
 	*time = convertir_time(ano, mes, dia, hora, minuto, segundo);
 	return;
@@ -275,7 +275,7 @@ cofunc void menu(char *texto, Event *eventos, int tipo){
 		if(i==-1){
 			imprimir(tipo,"Capacidad maxima de eventos alcanzada");
 		} else {
-			preguntar("Ingrese 1 para prender o ingrese 0 para apagar",texto,tipo);
+			preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo",texto,tipo);
 			command = texto[0];
 
 			preguntar("Ingrese el numero de led",texto,tipo);
