@@ -173,6 +173,12 @@ cofunc void hacerPregunta(char *pregunta, char *respuesta, int tipo){
 
 //Funcion encargada de pedir al usuario ingresar una fecha
 cofunc void ingresarFecha(unsigned long *time, int tipo){
+	int numeroAno;
+	int numeroMes;
+	int numeroDia;
+	int numeroHora;
+	int numeroMinuto;
+	int numeroSegundo;
 	char ano[MAX_TEXTO];
 	char mes[MAX_TEXTO];
 	char dia[MAX_TEXTO];
