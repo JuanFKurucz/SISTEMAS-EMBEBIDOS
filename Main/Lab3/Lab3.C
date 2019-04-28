@@ -17,9 +17,10 @@ tcp_Socket echosock;
 #use BTN.LIB
 #use LED.LIB
 #use UTILITIES.LIB
-#define MAX_EVENTOS 10
+#define MAX_EVENTOS 2
 #define MAX_TEXTO 10
 #define EVENTO_DESHABILITADO 0xFF
+#define EVENTO_CREANDOSE 0xFE
 #define preguntar(p, r, i) wfd hacerPregunta[i](p, r, i)
 
 // Definimos los eventos
@@ -172,7 +173,7 @@ void printTime(struct tm *fecha, int tipo)
 }
 
 //Funcion que retorna el primer indice vacio que encuentra de la lista de eventos
-char encontrarEspacioParaEvento(Event *eventos)
+int encontrarEspacioParaEvento(Event *eventos)
 {
 	int i;
 	for (i = 0; i < MAX_EVENTOS; i++)
@@ -400,10 +401,11 @@ cofunc void menu[2](Event *eventos, int tipo)
 		//todos sus datos
 		if (i == -1)
 		{
-			imprimir(tipo, "Capacidad maxima de eventos alcanzada");
+			imprimir(tipo, "Capacidad maxima de eventos alcanzada\n");
 		}
 		else
 		{
+			eventos[i].command = EVENTO_CREANDOSE;
 			preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
 			command = texto[0];
 
@@ -423,11 +425,13 @@ cofunc void menu[2](Event *eventos, int tipo)
 				}
 				else
 				{
+					eventos[i].command = EVENTO_DESHABILITADO;
 					imprimir(tipo, "Datos erroneos\n");
 				}
 			}
 			else
 			{
+				eventos[i].command = EVENTO_DESHABILITADO;
 				imprimir(tipo, "Fecha erronea\n");
 			}
 		}
