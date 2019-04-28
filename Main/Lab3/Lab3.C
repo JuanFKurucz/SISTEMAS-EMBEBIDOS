@@ -96,21 +96,7 @@ unsigned long convertir_time(char* ano, char* mes, char* dia, char* hora, char* 
 	numeroHora = atoi(hora);
 	numeroMinuto = atoi(minuto);
 	numeroSegundo = atoi(segundo);
-	if(numeroMes<=0 || numeroMes>12){
-		return -2;
-	}
-	if(numeroDia<=0 || numeroDia >= 32){
-		return -3;
-	}
-	if(numeroHora<0 || numeroHora>=24){
-		return -5;
-	}
-	if(numeroMinuto<0 || numeroMinuto>=60){
-		return -6;
-	}
-	if(numeroSegundo<0 || numeroSegundo>=60){
-		return -7;
-	}
+
 	fecha.tm_year = numeroAno;
 	fecha.tm_mon = numeroMes;
 	fecha.tm_mday = numeroDia;
@@ -195,11 +181,37 @@ cofunc void ingresarFecha(unsigned long *time, int tipo){
 	char segundo[MAX_TEXTO];
 
 	preguntar("Ingrese el ano",ano,tipo);
+
 	preguntar("Ingrese el mes (Se espera un num entre 1 y 12)",mes,tipo);
+	numeroMes = atoi(mes);
+	while(numeroMes<=0 || numeroMes>12){
+		preguntar("Ingrese nuevamente el mes (Se espera un num entre 1 y 12)",mes,tipo);
+		numeroMes = atoi(mes);
+	}
 	preguntar("Ingrese el dia (Se espera un num entre 1 y 31)",dia,tipo);
-	preguntar("Ingrese la hora",hora,tipo);
+	numeroDia = atoi(dia);
+	while(numeroDia<=0 || numeroDia >= 32){
+		preguntar("Ingrese nuevamente el dia (Se espera un num entre 1 y 31)",dia,tipo);
+		numeroDia = atoi(dia);
+	}
+	preguntar("Ingrese la hora(Se espera un num entre 0 y 24)",hora,tipo);
+	numeroHora = atoi(hora);
+	while(numeroHora<0 || numeroHora>=24){
+		preguntar("Ingrese nuevamente la hora(Se espera un num entre 0 y 24)",hora,tipo);
+		numeroHora = atoi(hora);
+	}
 	preguntar("Ingrese los minutos (Se espera un num entre 1 y 59)",minuto,tipo);
+	numeroMinuto = atoi(minuto);
+	while(minuto<0 || minuto>=60){
+		numeroMinuto = atoi(minuto);
+		preguntar("Ingrese nuevamente los minutos (Se espera un num entre 1 y 59)",minuto,tipo);
+	}
 	preguntar("Ingrese los segundos (Se espera un num entre 1 y 59)",segundo,tipo);
+	numeroSegundo = atoi(segundo);
+	while(segundo<0 || segundo>=60){
+		preguntar("Ingrese nuevamente los segundos (Se espera un num entre 1 y 59)",segundo,tipo);
+		numeroSegundo = atoi(segundo);
+	}
 
 	*time = convertir_time(ano, mes, dia, hora, minuto, segundo);
 	return;
@@ -212,18 +224,6 @@ int controlErroresFecha(unsigned long time, int tipo){
 	result = 0;
 	if(time == -1){
 		imprimir(tipo,"El ano ingresado es incorrecto\n");
-	} else if(time == -2){
-		imprimir(tipo,"El mes ingresado es incorrecto\n");
-	} else if(time == -3){
-		imprimir(tipo,"El dia ingresado es incorrecto\n");
-	} else if(time == -4){
-		imprimir(tipo,"Fecha erronea\n");
-	} else if(time == -5){
-		imprimir(tipo,"La hora ingresada es incorrecta\n");
-	} else if(time == -6){
-		imprimir(tipo,"Los minutos ingresados son incorrectos\n");
-	} else if(time == -7){
-		imprimir(tipo,"Los segundos ingresados son incorrectos\n");
 	} else if(time<0){
 		imprimir(tipo,"Fecha incorrecta\n");
 	} else {
