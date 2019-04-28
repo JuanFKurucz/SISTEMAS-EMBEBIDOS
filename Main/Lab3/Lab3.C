@@ -285,7 +285,7 @@ cofunc void ingresarFecha[2](unsigned long *time, int tipo)
 	}
 	while (numeroHora < 0 || numeroHora >= 24)
 	{
-		preguntar("Ingrese la hora(Se espera un numero entre 0 y 24)\n", respuesta, tipo);
+		preguntar("Ingrese la hora(Se espera un numero entre 0 y 23)\n", respuesta, tipo);
 		numeroHora = atoi(respuesta);
 	}
 	while (numeroMinuto < 0 || numeroMinuto >= 60)
@@ -295,7 +295,7 @@ cofunc void ingresarFecha[2](unsigned long *time, int tipo)
 	}
 	while (numeroSegundo < 0 || numeroSegundo >= 60)
 	{
-		preguntar("Ingrese los segundos (Se espera un num entre 1 y 59)\n", respuesta, tipo);
+		preguntar("Ingrese los segundos (Se espera un num entre 0 y 59)\n", respuesta, tipo);
 		numeroSegundo = atoi(respuesta);
 	}
 
@@ -351,14 +351,14 @@ int controlErroresFecha(unsigned long time, int tipo)
 //Menu principal - se despliega en cuento comienza nuestro programa
 void imprimirMenu(int tipo)
 {
-	imprimir(tipo, "===MENU COMIENZO===");
+	imprimir(tipo, "===MENU COMIENZO===\n");
 	imprimir(tipo, "Ingrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
 	imprimir(tipo, "Ingrese 2 para Consultar la hora del RTC del Rabbit\n");
 	imprimir(tipo, "Ingrese 3 para Agregar un evento de calendario.\n");
 	imprimir(tipo, "Ingrese 4 para Quitar un evento de calendario.\n");
 	imprimir(tipo, "Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
 	imprimir(tipo, "Ingrese 6 para Consultar las entradas analogicas.\n");
-	imprimir(tipo, "===MENU FIN===");
+	imprimir(tipo, "===MENU FIN===\n");
 }
 
 cofunc void menu[2](Event *eventos, int tipo)
