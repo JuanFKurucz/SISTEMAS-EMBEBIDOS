@@ -17,19 +17,9 @@ tcp_Socket echosock;
 #use BTN.LIB
 #use LED.LIB
 #use UTILITIES.LIB
-#define MAX_EVENTOS 2
+#use EVENTOS.LIB
 #define MAX_TEXTO 10
-#define EVENTO_DESHABILITADO 0xFF
-#define EVENTO_CREANDOSE 0xFE
 #define preguntar(p, r, i) wfd hacerPregunta[i](p, r, i)
-
-// Definimos los eventos
-typedef struct Events
-{
-	char command;
-	char param;
-	unsigned long time;
-} Event;
 
 enum connectionModes
 {
@@ -50,51 +40,6 @@ void imprimir(int tipo, char *s)
 	else
 	{
 		printf("%s", s);
-	}
-}
-
-// Funcion que inicializa los eventos con los valores time, param en 0 y command en EVENTO_DESHABILITADO
-iniciar_eventos(Event eventos[])
-{
-	int i;
-	for (i = 0; i < MAX_EVENTOS; i++)
-	{
-		eventos[i].time = 0;
-		eventos[i].param = 0;
-		eventos[i].command = EVENTO_DESHABILITADO;
-	}
-}
-
-//Funcion que borra los eventos
-void borrar_evento(Event *evento)
-{
-	(*evento).command = EVENTO_DESHABILITADO;
-	(*evento).param = 0;
-	(*evento).time = 0;
-}
-
-// Funcion que corre durante toda la ejecucion de nuestro programa,
-// buscando eventos que esten activos para ejecutarlos en el tiempo correspondiete
-// Nuestros eventos se activan una vez que command deja de ser EVENTO_DESHABILITADO
-consumir_eventos(Event eventos[])
-{
-	int i;
-	unsigned long timeNow;
-	timeNow = read_rtc();
-	for (i = 0; i < MAX_EVENTOS; i++)
-	{
-		if (eventos[i].command != EVENTO_DESHABILITADO && eventos[i].time == timeNow)
-		{
-			if (eventos[i].command == '1')
-			{
-				LED_SET(eventos[i].param);
-			}
-			else
-			{
-				LED_RESET(eventos[i].param);
-			}
-			borrar_evento(&eventos[i]);
-		}
 	}
 }
 
@@ -144,6 +89,8 @@ unsigned long convertir_time(int anio, int mes, int dia, int hora, int minuto, i
 	}
 }
 
+// Funcion que imprime los valores de las entradas analogicas dependiendo
+// desde donde se pregunta (tipo)
 cofunc void getInformacionEntradasAnalogicas[2](int tipo)
 {
 	char respuesta1[40];
@@ -163,27 +110,13 @@ void printTime(struct tm *fecha, int tipo)
 {
 	char respuesta[20];
 	sprintf(respuesta, "%d/%d/%d %d:%d:%d\n",
-			  (*fecha).tm_year + 1900,
-			  (*fecha).tm_mon,
-			  (*fecha).tm_mday,
-			  (*fecha).tm_hour,
-			  (*fecha).tm_min,
-			  (*fecha).tm_sec);
+			(*fecha).tm_year + 1900,
+			(*fecha).tm_mon,
+			(*fecha).tm_mday,
+			(*fecha).tm_hour,
+			(*fecha).tm_min,
+			(*fecha).tm_sec);
 	imprimir(tipo, respuesta);
-}
-
-//Funcion que retorna el primer indice vacio que encuentra de la lista de eventos
-int encontrarEspacioParaEvento(Event *eventos)
-{
-	int i;
-	for (i = 0; i < MAX_EVENTOS; i++)
-	{
-		if (eventos[i].command == EVENTO_DESHABILITADO)
-		{
-			return i;
-		}
-	}
-	return -1;
 }
 
 //Funcion que muestra los eventos en pantalla y retorna una lista de
@@ -203,20 +136,6 @@ void mostrarEventos(Event *eventos, int tipo)
 			imprimir(tipo, "\n");
 		}
 	}
-}
-
-//Funcion encarga de chequear si existe un evento creado
-char existenEventos(Event *eventos)
-{
-	int i;
-	for (i = 0; i < MAX_EVENTOS; i++)
-	{
-		if (eventos[i].command != EVENTO_DESHABILITADO)
-		{
-			return 1;
-		}
-	}
-	return 0;
 }
 
 //Funcion que imprime una pregunta y espera por la respuesta cargando el texto al puntero de char respuesta
@@ -312,7 +231,7 @@ int controlErroresFecha(unsigned long time, int tipo)
 	result = 0;
 	if (time == -1)
 	{
-		imprimir(tipo, "El ano ingresado es incorrecto\n");
+		imprimir(tipo, "El anio ingresado es incorrecto\n");
 	}
 	else if (time == -2)
 	{
@@ -362,6 +281,7 @@ void imprimirMenu(int tipo)
 	imprimir(tipo, "===MENU FIN===\n");
 }
 
+//Funcion encargada de gestionar el menu y todas sus tareas
 cofunc void menu[2](Event *eventos, int tipo)
 {
 	char texto[MAX_TEXTO];
@@ -393,7 +313,7 @@ cofunc void menu[2](Event *eventos, int tipo)
 		printTime(&fecha, tipo);
 		break;
 	case '3':
-		i = encontrarEspacioParaEvento(eventos);
+		i = EVENTOS_buscarEspacio(eventos);
 		//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
 		//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
 		//verificando que sean correctos y luego lo creamos
@@ -405,21 +325,21 @@ cofunc void menu[2](Event *eventos, int tipo)
 		}
 		else
 		{
-      	command = 0xFF;
-         param = 0xFF;
+			command = 0xFF;
+			param = 0xFF;
 			eventos[i].command = EVENTO_CREANDOSE;
 
-         while (command < '0' || command > '1')
-	      {
-            preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
+			while (command < '0' || command > '1')
+			{
+				preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
 				command = texto[0];
-	      }
+			}
 
-         while (param < '0' || param > '7')
-	      {
-            preguntar("Ingrese el numero de led (0 al 7)\n", texto, tipo);
-		  		param = texto[0];
-	      }
+			while (param < '0' || param > '7')
+			{
+				preguntar("Ingrese el numero de led (0 al 7)\n", texto, tipo);
+				param = texto[0];
+			}
 
 			imprimir(tipo, "Se asignara el tiempo del evento ahora:\n");
 			wfd ingresarFecha[tipo](&time, tipo);
@@ -447,7 +367,7 @@ cofunc void menu[2](Event *eventos, int tipo)
 		break;
 	case '4':
 		mostrarEventos(eventos, tipo);
-		if (existenEventos(eventos) == 1)
+		if (EVENTOS_existen(eventos) == 1)
 		{
 			i = -1;
 			preguntar("Inserte el indice del evento a eliminar\n", texto, tipo);
@@ -458,7 +378,7 @@ cofunc void menu[2](Event *eventos, int tipo)
 				//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
 				if (eventos[i].command != EVENTO_DESHABILITADO)
 				{
-					borrar_evento(&eventos[i]);
+					EVENTOS_borrar(&eventos[i]);
 				}
 				else
 				{
@@ -478,7 +398,7 @@ cofunc void menu[2](Event *eventos, int tipo)
 	case '5':
 		//Recorremos todos los eventos buscando unicamente los que se encuentren activos
 		//y los imprimimos por consola
-		if (existenEventos(eventos) == 0)
+		if (EVENTOS_existen(eventos) == 0)
 		{
 			imprimir(tipo, "No hay eventos creados\n");
 		}
@@ -508,7 +428,7 @@ main()
 {
 	Event eventos[MAX_EVENTOS];
 	HW_init();
-	iniciar_eventos(eventos);
+	EVENTOS_iniciar(eventos);
 	iniciarConexion();
 	printf("Iniciando\n");
 	while (1)
@@ -530,7 +450,7 @@ main()
 
 		costate
 		{
-			consumir_eventos(eventos);
+			EVENTOS_consumir(eventos);
 		}
 
 		//En este costate tenemos un menu para el usuario, con un switch y los diferentes casos posibles

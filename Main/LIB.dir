@@ -3,3 +3,4 @@ BTN.lib
 IO.lib
 LED.lib
 Utilities.lib
+EVENTOS.lib

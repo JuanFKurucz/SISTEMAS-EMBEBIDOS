@@ -1,0 +1,103 @@
+/*** BeginHeader */
+
+#define MAX_EVENTOS 10
+#define EVENTO_DESHABILITADO 0xFF
+#define EVENTO_CREANDOSE 0xFE
+
+// Definimos los eventos
+typedef struct Events
+{
+	char command;
+	char param;
+	unsigned long time;
+} Event;
+/*** EndHeader */
+
+/*** BeginHeader EVENTOS_iniciar */
+void EVENTOS_iniciar(Event eventos[]);
+/*** EndHeader */
+// Funcion que inicializa los eventos con los valores time, param en 0 y command en EVENTO_DESHABILITADO
+void EVENTOS_iniciar(Event eventos[])
+{
+	int i;
+	for (i = 0; i < MAX_EVENTOS; i++)
+	{
+		eventos[i].time = 0;
+		eventos[i].param = 0;
+		eventos[i].command = EVENTO_DESHABILITADO;
+	}
+}
+
+/*** BeginHeader EVENTOS_borrar */
+void EVENTOS_borrar(Event *evento);
+/*** EndHeader */
+//Funcion que borra los eventos
+void EVENTOS_borrar(Event *evento)
+{
+	(*evento).command = EVENTO_DESHABILITADO;
+	(*evento).param = 0;
+	(*evento).time = 0;
+}
+
+/*** BeginHeader EVENTOS_consumir */
+void EVENTOS_consumir(Event eventos[]);
+/*** EndHeader */
+// Funcion que corre durante toda la ejecucion de nuestro programa,
+// buscando eventos que esten activos para ejecutarlos en el tiempo correspondiete
+// Nuestros eventos se activan una vez que command deja de ser EVENTO_DESHABILITADO
+void EVENTOS_consumir(Event eventos[])
+{
+	int i;
+	unsigned long timeNow;
+	timeNow = read_rtc();
+	for (i = 0; i < MAX_EVENTOS; i++)
+	{
+		if (eventos[i].command != EVENTO_DESHABILITADO && eventos[i].time == timeNow)
+		{
+			if (eventos[i].command == '1')
+			{
+				LED_SET(eventos[i].param);
+			}
+			else
+			{
+				LED_RESET(eventos[i].param);
+			}
+			EVENTOS_borrar(&eventos[i]);
+		}
+	}
+}
+
+
+/*** BeginHeader EVENTOS_buscarEspacio */
+int EVENTOS_buscarEspacio(Event *eventos);
+/*** EndHeader */
+//Funcion que retorna el primer indice vacio que encuentra de la lista de eventos
+int EVENTOS_buscarEspacio(Event *eventos)
+{
+	int i;
+	for (i = 0; i < MAX_EVENTOS; i++)
+	{
+		if (eventos[i].command == EVENTO_DESHABILITADO)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+/*** BeginHeader EVENTOS_existen */
+char EVENTOS_existen(Event *eventos);
+/*** EndHeader */
+//Funcion encarga de chequear si existe un evento creado
+char EVENTOS_existen(Event *eventos)
+{
+	int i;
+	for (i = 0; i < MAX_EVENTOS; i++)
+	{
+		if (eventos[i].command != EVENTO_DESHABILITADO)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
