@@ -223,12 +223,12 @@ cofunc void ingresarFecha[2](unsigned long *time, int tipo){
 	char segundo[MAX_TEXTO];
 
 
-	wfd hacerPregunta[tipo]("Ingrese el ano\n",ano,tipo);
-	wfd hacerPregunta[tipo]("Ingrese el mes\n",mes,tipo);
-	wfd hacerPregunta[tipo]("Ingrese el dia\n",dia,tipo);
-	wfd hacerPregunta[tipo]("Ingrese la hora\n",hora,tipo);
-	wfd hacerPregunta[tipo]("Ingrese los minutos\n",minuto,tipo);
-	wfd hacerPregunta[tipo]("Ingrese los segundos\n",segundo,tipo);
+	preguntar("Ingrese el ano\n",ano,tipo);
+	preguntar("Ingrese el mes (Se espera un num entre 1 y 12)\n",mes,tipo);
+	preguntar("Ingrese el dia (Se espera un num entre 1 y 31)\n",dia,tipo);
+	preguntar("Ingrese la hora\n",hora,tipo);
+	preguntar("Ingrese los minutos (Se espera un num entre 0 y 59)\n",minuto,tipo);
+	preguntar("Ingrese los segundos (Se espera un num entre 0 y 59)\n",segundo,tipo);
 
 	*time = convertir_time(ano, mes, dia, hora, minuto, segundo);
 	return;
@@ -307,7 +307,7 @@ cofunc void menu[2](Event *eventos, int tipo){
 	       if(i==-1){
 	          imprimir(tipo,"Capacidad maxima de eventos alcanzada");
 	       } else {
-	          preguntar("Ingrese 1 para prender o ingrese 0 para apagar\n",texto,tipo);
+	          preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n",texto,tipo);
 	          command = texto[0];
 
 	          preguntar("Ingrese el numero de led\n",texto,tipo);
