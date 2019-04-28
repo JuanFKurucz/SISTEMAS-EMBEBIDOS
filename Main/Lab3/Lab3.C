@@ -87,44 +87,32 @@ consumir_eventos(Event eventos[]){
 
 // Funcion que obtiene a partir de un anio, mes y dia los segundos
 // usando la funcion mktime y la estructura tm para generarla
-unsigned long convertir_time(char* ano, char* mes, char* dia, char* hora, char* minuto, char* segundo){
-	int numeroAno;
-	int numeroMes;
-	int numeroDia;
-	int numeroHora;
-	int numeroMinuto;
-	int numeroSegundo;
+unsigned long convertir_time(int anio, int mes, int dia, int hora, int minuto, int segundo){
 	unsigned long calculo;
 	struct tm fecha;
 	struct tm fechaCheck;
 
-	numeroAno = atoi(ano)-1900;
-	numeroMes = atoi(mes);
-	numeroDia = atoi(dia);
-	numeroHora = atoi(hora);
-	numeroMinuto = atoi(minuto);
-	numeroSegundo = atoi(segundo);
-	if(numeroMes<=0 || numeroMes>12){
+	if(mes<=0 || mes>12){
 		return -2;
 	}
-	if(numeroDia<=0 || numeroDia >= 32){
+	if(dia<=0 || dia >= 32){
 		return -3;
 	}
-	if(numeroHora<0 || numeroHora>=24){
+	if(hora<0 || hora>=24){
 		return -5;
 	}
-	if(numeroMinuto<0 || numeroMinuto>=60){
+	if(minuto<0 || minuto>=60){
 		return -6;
 	}
-	if(numeroSegundo<0 || numeroSegundo>=60){
+	if(segundo<0 || segundo>=60){
 		return -7;
 	}
-	fecha.tm_year = numeroAno;
-	fecha.tm_mon = numeroMes;
-	fecha.tm_mday = numeroDia;
-	fecha.tm_hour = numeroHora;
-	fecha.tm_min = numeroMinuto;
-	fecha.tm_sec = numeroSegundo;
+	fecha.tm_year = anio-1900;
+	fecha.tm_mon = mes;
+	fecha.tm_mday = dia;
+	fecha.tm_hour = hora;
+	fecha.tm_min = minuto;
+	fecha.tm_sec = segundo;
 	calculo = mktime(&fecha);
 	mktm(&fechaCheck,calculo);
 	if(memcmp(&fecha,&fechaCheck,0)==0){
@@ -215,22 +203,45 @@ cofunc void hacerPregunta[2](char *pregunta, char *respuesta, int tipo){
 
 //Funcion encargada de pedir al usuario ingresar una fecha
 cofunc void ingresarFecha[2](unsigned long *time, int tipo){
-	char ano[MAX_TEXTO];
-	char mes[MAX_TEXTO];
-	char dia[MAX_TEXTO];
-	char hora[MAX_TEXTO];
-	char minuto[MAX_TEXTO];
-	char segundo[MAX_TEXTO];
+	char respuesta[MAX_TEXTO];
+	int numeroAnio;
+	int numeroMes;
+	int numeroDia;
+	int numeroHora;
+	int numeroMinuto;
+	int numeroSegundo;
 
+	numeroAnio=-1;
+	numeroMes=-1;
+	numeroDia=-1;
+	numeroHora=-1;
+	numeroMinuto=-1;
+	numeroSegundo=-1;
 
-	preguntar("Ingrese el ano\n",ano,tipo);
-	preguntar("Ingrese el mes (Se espera un num entre 1 y 12)\n",mes,tipo);
-	preguntar("Ingrese el dia (Se espera un num entre 1 y 31)\n",dia,tipo);
-	preguntar("Ingrese la hora\n",hora,tipo);
-	preguntar("Ingrese los minutos (Se espera un num entre 0 y 59)\n",minuto,tipo);
-	preguntar("Ingrese los segundos (Se espera un num entre 0 y 59)\n",segundo,tipo);
+	preguntar("Ingrese el ano\n",respuesta,tipo);
+	numeroAnio = atoi(respuesta);
+	while(numeroMes<=0 || numeroMes>12){
+		preguntar("Ingrese el mes (Se espera un numero entre 1 y 12)\n",respuesta,tipo);
+		numeroMes = atoi(respuesta);
+	}
+	while(numeroDia<=0 || numeroDia >= 32){
+		preguntar("Ingrese el dia (Se espera un numero entre 1 y 31)\n",respuesta,tipo);
+		numeroDia = atoi(respuesta);
+	}
+	while(numeroHora<0 || numeroHora>=24){
+		preguntar("Ingrese la hora(Se espera un numero entre 0 y 24)\n",respuesta,tipo);
+		numeroHora = atoi(respuesta);
+	}
+	while(numeroMinuto<0 || numeroMinuto>=60){
+		preguntar("Ingrese los minutos (Se espera un num entre 0 y 59)\n",respuesta,tipo);
+		numeroMinuto = atoi(respuesta);
+	}
+	while(numeroSegundo<0 || numeroSegundo>=60){
+		preguntar("Ingrese los segundos (Se espera un num entre 1 y 59)\n",respuesta,tipo);
+		numeroSegundo = atoi(respuesta);
+	}
 
-	*time = convertir_time(ano, mes, dia, hora, minuto, segundo);
+	*time = convertir_time(numeroAnio, numeroMes, numeroDia, numeroHora, numeroMinuto, numeroSegundo);
 	return;
 }
 
