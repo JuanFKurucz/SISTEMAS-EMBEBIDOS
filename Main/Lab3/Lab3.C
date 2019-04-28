@@ -122,6 +122,20 @@ unsigned long convertir_time(int anio, int mes, int dia, int hora, int minuto, i
 	}
 }
 
+cofunc void getInformacionEntradasAnalogicas[2](int tipo){
+	char respuesta1[40];
+	char respuesta2[40];
+   int ana1;
+   int ana2;
+   wfd ana1 = IO_getAnalogInput(0);
+   wfd ana2 = IO_getAnalogInput(1);
+	sprintf(respuesta1,"Entrada analogica 1 = %d\n", ana1);
+	imprimir(tipo,respuesta1);
+	sprintf(respuesta2,"Entrada analogica 2 = %d\n", ana2);
+	imprimir(tipo,respuesta2);
+}
+
+
 //Se imprime la fecha sumandole 1900 al a�o para mostrarlo humanamente
 void printTime(struct tm *fecha,int tipo){
 	char respuesta[20];
@@ -274,11 +288,14 @@ int controlErroresFecha(unsigned long time, int tipo){
 
 //Menu principal - se despliega en cuento comienza nuestro programa
 void imprimirMenu(int tipo){
+	imprimir(tipo,"===MENU COMIENZO===");
   imprimir(tipo,"Ingrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
   imprimir(tipo,"Ingrese 2 para Consultar la hora del RTC del Rabbit\n");
   imprimir(tipo,"Ingrese 3 para Agregar un evento de calendario.\n");
   imprimir(tipo,"Ingrese 4 para Quitar un evento de calendario.\n");
   imprimir(tipo,"Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
+  imprimir(tipo,"Ingrese 6 para Consultar las entradas analogicas.\n");
+	imprimir(tipo,"===MENU FIN===");
 }
 
 cofunc void menu[2](Event *eventos, int tipo){
@@ -370,11 +387,15 @@ cofunc void menu[2](Event *eventos, int tipo){
 	          mostrarEventos(eventos,tipo);
 	       }
 	       break;
+		 case '6':
+			wfd getInformacionEntradasAnalogicas[tipo](tipo);
+		 	break;
 	    default:
 	       imprimir(tipo,"Comando no encontrado");
 	 }
     return;
 }
+
 
 //Establecer la conexión
 void iniciarConexion(){
@@ -386,7 +407,6 @@ void iniciarConexion(){
 main()
 {
 	Event eventos[MAX_EVENTOS];
-	char texto[MAX_TEXTO];
 	HW_init();
 	iniciar_eventos(eventos);
    iniciarConexion();
