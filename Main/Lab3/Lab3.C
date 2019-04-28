@@ -405,12 +405,21 @@ cofunc void menu[2](Event *eventos, int tipo)
 		}
 		else
 		{
+      	command = 0xFF;
+         param = 0xFF;
 			eventos[i].command = EVENTO_CREANDOSE;
-			preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
-			command = texto[0];
 
-			preguntar("Ingrese el numero de led\n", texto, tipo);
-			param = texto[0];
+         while (command < '0' || command > '1')
+	      {
+            preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
+				command = texto[0];
+	      }
+
+         while (param < '0' || param > '7')
+	      {
+            preguntar("Ingrese el numero de led (0 al 7)\n", texto, tipo);
+		  		param = texto[0];
+	      }
 
 			imprimir(tipo, "Se asignara el tiempo del evento ahora:\n");
 			wfd ingresarFecha[tipo](&time, tipo);
