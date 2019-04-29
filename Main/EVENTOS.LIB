@@ -52,7 +52,7 @@ void EVENTOS_consumir(Event eventos[])
 	timeNow = read_rtc();
 	for (i = 0; i < MAX_EVENTOS; i++)
 	{
-		if (eventos[i].command != EVENTO_DESHABILITADO && eventos[i].time == timeNow)
+		if (eventos[i].command != EVENTO_DESHABILITADO && eventos[i].time <= timeNow)
 		{
 			if (eventos[i].command == '1')
 			{
