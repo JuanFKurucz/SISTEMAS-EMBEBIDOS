@@ -1,5 +1,15 @@
 #use "ucos2.lib"
 
+#define TCPCONFIG 0
+#define USE_ETHERNET 1
+#define MY_IP_ADDRESS "10.10.6.100"
+#define MY_NETMASK "255.255.255.0"
+#define MY_GATEWAY "10.10.6.2"
+#define MAX_BUFSIZE 2048
+#memmap xmem
+#use "dcrtcp.lib"
+#define PORT 7
+
 #use IO.LIB
 #use BTN.LIB
 #use LED.LIB
@@ -8,6 +18,9 @@
 
 #define MAX_TEXTO 10
 
+
+
+tcp_Socket echosock;
 OS_EVENT* Semaforo;
 
 void blinkRedLed(void *datos){
@@ -254,19 +267,39 @@ void menu(void* data)
    }
 }
 
+void matenerEthernet(){
+	while(1){
+		tcp_tick(NULL);
+   }
+}
+
+void consumir(void* data){
+	while(1){
+   	EVENTOS_consumir(data);
+   }
+}
+
+//Establecer la conexión
+void iniciarConexion()
+{
+	sock_init();
+	tcp_listen(&echosock, PORT, 0, 0, NULL, 0);
+	sock_mode(&echosock, TCP_MODE_ASCII);
+}
+
 main()
 {
 	Event eventos[MAX_EVENTOS];
 	OSInit();
 	HW_init();
+	iniciarConexion();
 
 
 	printf("Iniciando\n");
 
-	OSTaskCreate(blinkRedLed, NULL, 512, 5);
-	OSTaskCreate(menu, eventos, 512, 6);
-	/*
-	waitfor(DelayMs(800));
-	*/
+	OSTaskCreate(matenerEthernet, NULL, 512, 10);
+	OSTaskCreate(blinkRedLed, NULL, 512, 6);
+	OSTaskCreate(consumir, eventos, 512, 9);
+	OSTaskCreate(menu, eventos, 512, 8);     
 	OSStart();
 }
