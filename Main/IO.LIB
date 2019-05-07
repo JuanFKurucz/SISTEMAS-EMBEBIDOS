@@ -136,9 +136,9 @@ void IO_setOutput( enum portName p_port, enum bitNumber p_pin, unsigned char p_s
 }
 
 /*** BeginHeader IO_getAnalogInput */
-cofunc int IO_getAnalogInput( unsigned char p_input );
+int IO_getAnalogInput( unsigned char p_input );
 /*** EndHeader */
-cofunc int IO_getAnalogInput( unsigned char p_input )
+int IO_getAnalogInput( unsigned char p_input )
 {
 	char datos[PIC_MAX_MSG_LENGTH];
 	char crc, i;
@@ -160,10 +160,7 @@ cofunc int IO_getAnalogInput( unsigned char p_input )
 	serCputc(STX + ETX + '1' + '0');
 
 	timeout = MS_TIMER + PIC_COM_TIMEOUT;
-	while( (serCrdUsed() != PIC_MAX_MSG_LENGTH) && ((long)(MS_TIMER-timeout) < 0) ){
-		yield;
-	}
-
+	while( (serCrdUsed() != PIC_MAX_MSG_LENGTH) && ((long)(MS_TIMER-timeout) < 0) );
 	if( serCrdUsed() != PIC_MAX_MSG_LENGTH )
 	{
 		return -2;
