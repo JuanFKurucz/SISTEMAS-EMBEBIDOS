@@ -1,5 +1,7 @@
 #define OS_TIME_DLY_HMSM_EN 1
-#use "ucos2.lib"
+#define OS_MEM_EN 1
+
+
 
 #define TCPCONFIG 0
 #define USE_ETHERNET 1
@@ -8,8 +10,10 @@
 #define MY_GATEWAY "10.10.6.2"
 #define MAX_BUFSIZE 2048
 #memmap xmem
+#use "ucos2.lib"
 #use "dcrtcp.lib"
 #define PORT 7
+OS_MEM *CommTxBuf;
 
 #use IO.LIB
 #use BTN.LIB
@@ -17,12 +21,12 @@
 #use UTILITIES.LIB
 #use EVENTOS.LIB
 
-#define MAX_TEXTO 10
+#define MAX_TEXTO 200
 
 // Definimos los eventos
 typedef struct Connections
 {
-	char tipo;
+	int tipo;
 	Event *eventos;
 } Connection;
 
@@ -33,9 +37,8 @@ enum connectionModes
 	ETHERNET
 };
 
-
-
 tcp_Socket echosock;
+
 OS_EVENT* Semaforo;
 
 void blinkRedLed(void *datos){
@@ -50,23 +53,23 @@ void blinkRedLed(void *datos){
 //Funcion que en base al tipo pasado por parametro
 //escribe por consola o por hercules
 //En el caso de que sea un 1 ser� por Hercules
-void imprimir(int tipo, char *s)
+void imprimir(int *tipo, char *s)
 {
-	if (tipo == ETHERNET)
+	if (*tipo == ETHERNET)
 	{
 		sock_fastwrite(&echosock, s, strlen(s));
 	}
-	else if(tipo == CONSOLE)
+	else if(*tipo == CONSOLE)
 	{
 		printf("%s", s);
 	} else {
-		printf("Se corrompio");
+		printf("Se corrompio: %d\n",*tipo);
 	}
 }
 
 
 //Menu principal - se despliega en cuento comienza nuestro programa
-void imprimirMenu(int tipo)
+void imprimirMenu(int *tipo)
 {
 	imprimir(tipo, "===MENU COMIENZO===\n");
 	imprimir(tipo, "Ingrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
@@ -79,18 +82,19 @@ void imprimirMenu(int tipo)
 }
 
 //Funcion que imprime una pregunta y espera por la respuesta cargando el texto al puntero de char respuesta
-void preguntar(char *pregunta, char *respuesta, int tipo)
+void preguntar(char *pregunta, char *respuesta, int *tipo)
 {
 	int bytes;
+
 	imprimir(tipo, pregunta);
 
-	if (tipo == CONSOLE)
+	if (*tipo == CONSOLE)
 	{
 		while(getswf(respuesta)==0){
         OSTimeDlyHMSM(0,0,0,100);
-    };
+    	};
 	}
-	else if (tipo == ETHERNET)
+	else if (*tipo == ETHERNET)
 	{
 		while (tcp_tick(&echosock))
 		{
@@ -108,14 +112,11 @@ void preguntar(char *pregunta, char *respuesta, int tipo)
 			}
 			OSTimeDlyHMSM(0,0,0,100);
 		}
-		while(1){
-			OSTimeDlyHMSM(0,0,0,100);
-		}
 	}
 }
 
 //Se imprime la fecha sumandole 1900 al a�o para mostrarlo humanamente
-void printTime(struct tm *fecha, int tipo)
+void printTime(struct tm *fecha, int *tipo)
 {
 	char respuesta[20];
 	sprintf(respuesta, "%d/%d/%d %d:%d:%d\n",
@@ -178,7 +179,7 @@ unsigned long convertir_time(int anio, int mes, int dia, int hora, int minuto, i
 
 //Funcion encargada de mostrar en pantalla el control de errores de la funcion convertir_time
 //retorna 0 si hay un fallo retorna 1 si esta bien
-int controlErroresFecha(unsigned long time, int tipo)
+int controlErroresFecha(unsigned long time, int *tipo)
 {
 	int result;
 	result = 0;
@@ -222,9 +223,9 @@ int controlErroresFecha(unsigned long time, int tipo)
 }
 
 //Funcion encargada de pedir al usuario ingresar una fecha
-void ingresarFecha(unsigned long *time, int tipo)
+void ingresarFecha(unsigned long *time, int *tipo)
 {
-	char respuesta[MAX_TEXTO];
+	char respuesta[2048];
 	int numeroAnio;
 	int numeroMes;
 	int numeroDia;
@@ -272,11 +273,11 @@ void ingresarFecha(unsigned long *time, int tipo)
 }
 
 //Funcion que muestra los eventos en pantalla y retorna una lista de
-void mostrarEventos(Event *eventos, int tipo)
+void mostrarEventos(Event *eventos, int *tipo)
 {
 	struct tm fecha;
 	int i;
-	char buffer[100];
+	char buffer[2048];
 	for (i = 0; i < MAX_EVENTOS; i++)
 	{
 		if (eventos[i].command != EVENTO_DESHABILITADO)
@@ -292,7 +293,7 @@ void mostrarEventos(Event *eventos, int tipo)
 
 // Funcion que imprime los valores de las entradas analogicas dependiendo
 // desde donde se pregunta (tipo)
-void getInformacionEntradasAnalogicas(int tipo)
+void getInformacionEntradasAnalogicas(int *tipo)
 {
 	char respuesta1[40];
 	char respuesta2[40];
@@ -307,25 +308,20 @@ void getInformacionEntradasAnalogicas(int tipo)
 }
 
 //Funcion encargada de gestionar el menu y todas sus tareas
-void menu(void* data)
+void menu(Connection *data, int * tipo)
 {
-	char texto[MAX_TEXTO];
+	char texto[2048];
 	struct tm fecha;
 	char command;
 	char param;
 	int i; //Posicion de indice, usada para fors y obtencion de posiciones con funciones
 	unsigned long time;
 	int status;
-	int tipo;
-	Connection* newData;
 	Event* eventos;
-	newData = (Connection*) data;
-	tipo = (*newData).tipo;
-	eventos = (*newData).eventos;
-
+	eventos = (*data).eventos;
 	while(1){
 		imprimirMenu(tipo);
-		preguntar("Ingrese una opcion\n",texto,tipo);
+  		preguntar("Ingrese una opcion\n",texto,tipo);
 
 		switch (texto[0])
 		{
@@ -450,8 +446,8 @@ void menu(void* data)
 
 void matenerEthernet(){
 	while(1){
-		tcp_tick(NULL);
-		OSTimeDlyHMSM(0,0,0,100);
+	  	tcp_tick(NULL);
+	  	OSTimeDlyHMSM(0,0,0,100);
 	}
 }
 
@@ -470,27 +466,62 @@ void iniciarConexion()
 	sock_mode(&echosock, TCP_MODE_ASCII);
 }
 
+void iniciarMenuConsola(void* data){
+	INT8U err;
+	Connection *con;
+   int tipo;
+   tipo = 0;
+   con = (Connection*)(OSMemGet(CommTxBuf, &err));
+   while(1){
+   	menu(con,&tipo);
+   	OSTimeDlyHMSM(0,0,0,100);
+   }
+}
+
+void iniciarMenuEthernet(void* data){
+	INT8U err;
+	Connection *con;
+   int tipo;
+   tipo = 1;
+   con = (Connection*)(OSMemGet(CommTxBuf, &err));
+   con++;
+	while(1){
+      while (!sock_established(&echosock))
+		{
+			OSTimeDlyHMSM(0,0,0,100);
+   	}
+      menu(con,&tipo);
+   	OSTimeDlyHMSM(0,0,0,100);
+   }
+}
+
+Connection conexiones[2];
 main()
 {
 	Event eventos[MAX_EVENTOS];
-	Connection consola;
-	Connection ethernet;
+   INT8U err;
+	Connection *con;
+
 	OSInit();
+   CommTxBuf = OSMemCreate(conexiones,2,sizeof(Connection),&err);
+
 	HW_init();
 	iniciarConexion();
 	EVENTOS_iniciar(eventos);
-	consola.tipo = CONSOLE;
-	consola.eventos = eventos;
-	ethernet.tipo = ETHERNET;
-	ethernet.eventos = eventos;
+   con = (Connection*)(OSMemGet(CommTxBuf, &err));
+	(*con).tipo = 0;
+	(*con).eventos = eventos;
+   con++;
+   (*con).tipo = 1;
+	(*con).eventos = eventos;
 
 	printf("Iniciando\n");
 
 	OSTaskCreate(blinkRedLed, NULL, 512, 6);
-	OSTaskCreate(menu, &consola, 512, 7);
-	OSTaskCreate(matenerEthernet, NULL, 512, 8);
-	OSTaskCreate(menu, &ethernet, 512, 9);
-	OSTaskCreate(consumir, eventos, 512, 10);
+	OSTaskCreate(iniciarMenuConsola, NULL, 512, 7);
+	OSTaskCreate(matenerEthernet, NULL, 512, 5);
+  	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 9);
+   OSTaskCreate(consumir, eventos, 512, 10);
 
 	OSStart();
 }
