@@ -1,17 +1,7 @@
-#define DEPURANDO 0
-
-#define MAX_TEXTO 200
-#define MAX_CLIENTES 1
-
-#define TASK_STK_SIZE 2K
-#if 4+MAX_CLIENTES>10
-	#define OS_MAX_TASKS 4+MAX_CLIENTES
-#else
-   #define OS_MAX_TASKS 10
-#endif
-#define STACK_CNT_2K 1+MAX_CLIENTES
-#define OS_TIME_DLY_HMSM_EN	 1
+#define OS_TIME_DLY_HMSM_EN 1
 #define OS_MEM_EN 1
+
+
 
 #define TCPCONFIG 0
 #define USE_ETHERNET 1
@@ -19,15 +9,11 @@
 #define MY_NETMASK "255.255.255.0"
 #define MY_GATEWAY "10.10.6.2"
 #define MAX_BUFSIZE 2048
-#define MAX_TCP_SOCKET_BUFFERS MAX_CLIENTES
-
 #memmap xmem
-
 #use "ucos2.lib"
 #use "dcrtcp.lib"
 #define PORT 7
-
-OS_MEM *Memoria;
+OS_MEM *CommTxBuf;
 
 #use IO.LIB
 #use BTN.LIB
@@ -35,13 +21,13 @@ OS_MEM *Memoria;
 #use UTILITIES.LIB
 #use EVENTOS.LIB
 
+#define MAX_TEXTO 200
 
 // Definimos los eventos
 typedef struct Connections
 {
 	int tipo;
 	Event *eventos;
-	tcp_Socket *socket;
 } Connection;
 
 enum connectionModes
@@ -51,107 +37,88 @@ enum connectionModes
 	ETHERNET
 };
 
-tcp_Socket sockClientes[MAX_CLIENTES];
+tcp_Socket echosock;
 
 OS_EVENT* Semaforo;
 
 void blinkRedLed(void *datos){
 	while(1){
-		#if DEPURANDO
-   		printf("Console: blinkRedLed\n");
-		#endif
 		LED_ROJO_SET();
-		OSTimeDlyHMSM(0,0,0,400);
+		OSTimeDlySec(1);
 		LED_ROJO_RESET();
-		OSTimeDlyHMSM(0,0,0,800);
+		OSTimeDlySec(1);
 	}
 }
 
-OS_EVENT * semTellEth;
 //Funcion que en base al tipo pasado por parametro
 //escribe por consola o por hercules
 //En el caso de que sea un 1 ser� por Hercules
-void imprimir(Connection *conexion, char *s)
+void imprimir(int *tipo, char *s)
 {
-	char err;
-	if ((*conexion).tipo == ETHERNET)
+	if (*tipo == ETHERNET)
 	{
-	//	OSSemPend(semTellEth, 0, &err);
-		sock_fastwrite((*conexion).socket, s, strlen(s));
-	//	OSSemPost(semTellEth);
+		sock_fastwrite(&echosock, s, strlen(s));
 	}
-	else if((*conexion).tipo == CONSOLE)
+	else if(*tipo == CONSOLE)
 	{
 		printf("%s", s);
 	} else {
-		#if DEPURANDO
-			printf("Se corrompio: %d\n",(*conexion).tipo);
-		#endif
+		printf("Se corrompio: %d\n",*tipo);
 	}
 }
 
 
 //Menu principal - se despliega en cuento comienza nuestro programa
-void imprimirMenu(Connection *conexion)
+void imprimirMenu(int *tipo)
 {
-	imprimir(conexion, "===MENU COMIENZO===\n");
-	imprimir(conexion, "Ingrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
-	imprimir(conexion, "Ingrese 2 para Consultar la hora del RTC del Rabbit\n");
-	imprimir(conexion, "Ingrese 3 para Agregar un evento de calendario.\n");
-	imprimir(conexion, "Ingrese 4 para Quitar un evento de calendario.\n");
-	imprimir(conexion, "Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
-	imprimir(conexion, "Ingrese 6 para Consultar las entradas analogicas.\n");
-	imprimir(conexion, "===MENU FIN===\n");
+	imprimir(tipo, "===MENU COMIENZO===\n");
+	imprimir(tipo, "Ingrese 1 para Fijar la hora del reloj de tiempo real (RTC) del Rabbit\n");
+	imprimir(tipo, "Ingrese 2 para Consultar la hora del RTC del Rabbit\n");
+	imprimir(tipo, "Ingrese 3 para Agregar un evento de calendario.\n");
+	imprimir(tipo, "Ingrese 4 para Quitar un evento de calendario.\n");
+	imprimir(tipo, "Ingrese 5 para Consultar la lista de eventos de calendario activos.\n");
+	imprimir(tipo, "Ingrese 6 para Consultar las entradas analogicas.\n");
+	imprimir(tipo, "===MENU FIN===\n");
 }
 
-OS_EVENT * semAskEth;
 //Funcion que imprime una pregunta y espera por la respuesta cargando el texto al puntero de char respuesta
-void preguntar(char *pregunta, char *respuesta, Connection *conexion)
+void preguntar(char *pregunta, char *respuesta, int *tipo)
 {
 	int bytes;
-   char err;
-	imprimir(conexion, pregunta);
 
-	if ((*conexion).tipo == CONSOLE)
+	imprimir(tipo, pregunta);
+
+	if (*tipo == CONSOLE)
 	{
-		#if DEPURANDO
-			printf("Esperando respuesta de: %d\n",(*conexion).tipo);
-		#endif
 		while(getswf(respuesta)==0){
-			OSTimeDlySec(1);
-  	};
+        OSTimeDlyHMSM(0,0,0,100);
+    	};
 	}
-	else if ((*conexion).tipo == ETHERNET)
+	else if (*tipo == ETHERNET)
 	{
-		while (tcp_tick((*conexion).socket))
+		while (tcp_tick(&echosock))
 		{
-			#if DEPURANDO
-				printf("Esperando respuesta de: %d\n",*(*conexion).socket);
-			#endif
-  //    OSSemPend(semAskEth, 0, &err);
-			bytes = sock_dataready((*conexion).socket);
+			bytes = sock_dataready(&echosock);
 			if (bytes > 0)
 			{
 				if (bytes > MAX_BUFSIZE)
 				{
 					bytes = MAX_BUFSIZE;
 				}
-				sock_fastread((*conexion).socket, respuesta, bytes);
-				sock_flush((*conexion).socket);
+				sock_fastread(&echosock, respuesta, bytes);
+				sock_flush(&echosock);
 				respuesta[bytes] = '\0';
-    //  	OSSemPost(semQueue);
 				return;
 			}
-			OSTimeDlySec(1);
+			OSTimeDlyHMSM(0,0,0,100);
 		}
-		while(1){
-			OSTimeDlySec(1);
-		}
-	}
+	} else {
+    	printf("Se corrompio\n");
+   }
 }
 
 //Se imprime la fecha sumandole 1900 al a�o para mostrarlo humanamente
-void printTime(struct tm *fecha, Connection *conexion)
+void printTime(struct tm *fecha, int *tipo)
 {
 	char respuesta[20];
 	sprintf(respuesta, "%d/%d/%d %d:%d:%d\n",
@@ -161,7 +128,7 @@ void printTime(struct tm *fecha, Connection *conexion)
 	(*fecha).tm_hour,
 	(*fecha).tm_min,
 	(*fecha).tm_sec);
-	imprimir(conexion, respuesta);
+	imprimir(tipo, respuesta);
 }
 
 
@@ -214,41 +181,41 @@ unsigned long convertir_time(int anio, int mes, int dia, int hora, int minuto, i
 
 //Funcion encargada de mostrar en pantalla el control de errores de la funcion convertir_time
 //retorna 0 si hay un fallo retorna 1 si esta bien
-int controlErroresFecha(unsigned long time, Connection *conexion)
+int controlErroresFecha(unsigned long time, int *tipo)
 {
 	int result;
 	result = 0;
 	if (time == -1)
 	{
-		imprimir(conexion, "El anio ingresado es incorrecto\n");
+		imprimir(tipo, "El anio ingresado es incorrecto\n");
 	}
 	else if (time == -2)
 	{
-		imprimir(conexion, "El mes ingresado es incorrecto\n");
+		imprimir(tipo, "El mes ingresado es incorrecto\n");
 	}
 	else if (time == -3)
 	{
-		imprimir(conexion, "El dia ingresado es incorrecto\n");
+		imprimir(tipo, "El dia ingresado es incorrecto\n");
 	}
 	else if (time == -4)
 	{
-		imprimir(conexion, "Fecha erronea\n");
+		imprimir(tipo, "Fecha erronea\n");
 	}
 	else if (time == -5)
 	{
-		imprimir(conexion, "La hora ingresada es incorrecta\n");
+		imprimir(tipo, "La hora ingresada es incorrecta\n");
 	}
 	else if (time == -6)
 	{
-		imprimir(conexion, "Los minutos ingresados son incorrectos\n");
+		imprimir(tipo, "Los minutos ingresados son incorrectos\n");
 	}
 	else if (time == -7)
 	{
-		imprimir(conexion, "Los segundos ingresados son incorrectos\n");
+		imprimir(tipo, "Los segundos ingresados son incorrectos\n");
 	}
 	else if (time < 0)
 	{
-		imprimir(conexion, "Fecha incorrecta\n");
+		imprimir(tipo, "Fecha incorrecta\n");
 	}
 	else
 	{
@@ -258,7 +225,7 @@ int controlErroresFecha(unsigned long time, Connection *conexion)
 }
 
 //Funcion encargada de pedir al usuario ingresar una fecha
-void ingresarFecha(unsigned long *time, Connection *conexion)
+void ingresarFecha(unsigned long *time, int *tipo)
 {
 	char respuesta[2048];
 	int numeroAnio;
@@ -275,31 +242,31 @@ void ingresarFecha(unsigned long *time, Connection *conexion)
 	numeroMinuto = -1;
 	numeroSegundo = -1;
 
-	preguntar("Ingrese el ano\n", respuesta, conexion);
+	preguntar("Ingrese el ano\n", respuesta, tipo);
 	numeroAnio = atoi(respuesta);
 	while (numeroMes <= 0 || numeroMes > 12)
 	{
-		preguntar("Ingrese el mes (Se espera un numero entre 1 y 12)\n", respuesta, conexion);
+		preguntar("Ingrese el mes (Se espera un numero entre 1 y 12)\n", respuesta, tipo);
 		numeroMes = atoi(respuesta);
 	}
 	while (numeroDia <= 0 || numeroDia >= 32)
 	{
-		preguntar("Ingrese el dia (Se espera un numero entre 1 y 31)\n", respuesta, conexion);
+		preguntar("Ingrese el dia (Se espera un numero entre 1 y 31)\n", respuesta, tipo);
 		numeroDia = atoi(respuesta);
 	}
 	while (numeroHora < 0 || numeroHora >= 24)
 	{
-		preguntar("Ingrese la hora(Se espera un numero entre 0 y 23)\n", respuesta, conexion);
+		preguntar("Ingrese la hora(Se espera un numero entre 0 y 23)\n", respuesta, tipo);
 		numeroHora = atoi(respuesta);
 	}
 	while (numeroMinuto < 0 || numeroMinuto >= 60)
 	{
-		preguntar("Ingrese los minutos (Se espera un num entre 0 y 59)\n", respuesta, conexion);
+		preguntar("Ingrese los minutos (Se espera un num entre 0 y 59)\n", respuesta, tipo);
 		numeroMinuto = atoi(respuesta);
 	}
 	while (numeroSegundo < 0 || numeroSegundo >= 60)
 	{
-		preguntar("Ingrese los segundos (Se espera un num entre 0 y 59)\n", respuesta, conexion);
+		preguntar("Ingrese los segundos (Se espera un num entre 0 y 59)\n", respuesta, tipo);
 		numeroSegundo = atoi(respuesta);
 	}
 
@@ -308,7 +275,7 @@ void ingresarFecha(unsigned long *time, Connection *conexion)
 }
 
 //Funcion que muestra los eventos en pantalla y retorna una lista de
-void mostrarEventos(Event *eventos, Connection *conexion)
+void mostrarEventos(Event *eventos, int *tipo)
 {
 	struct tm fecha;
 	int i;
@@ -318,17 +285,17 @@ void mostrarEventos(Event *eventos, Connection *conexion)
 		if (eventos[i].command != EVENTO_DESHABILITADO)
 		{
 			sprintf(buffer, "%d: Accion: %c, Bit: %c, Tiempo: ", i, eventos[i].command, eventos[i].param);
-			imprimir(conexion, buffer);
+			imprimir(tipo, buffer);
 			mktm(&fecha, eventos[i].time);
-			printTime(&fecha, conexion);
-			imprimir(conexion, "\n");
+			printTime(&fecha, tipo);
+			imprimir(tipo, "\n");
 		}
 	}
 }
 
 // Funcion que imprime los valores de las entradas analogicas dependiendo
-// desde donde se pregunta (conexion)
-void getInformacionEntradasAnalogicas(Connection *conexion)
+// desde donde se pregunta (tipo)
+void getInformacionEntradasAnalogicas(int *tipo)
 {
 	char respuesta1[40];
 	char respuesta2[40];
@@ -337,13 +304,13 @@ void getInformacionEntradasAnalogicas(Connection *conexion)
 	ana1 = IO_getAnalogInput(0);
 	ana2 = IO_getAnalogInput(1);
 	sprintf(respuesta1, "Entrada analogica 1 = %d\n", ana1);
-	imprimir(conexion, respuesta1);
+	imprimir(tipo, respuesta1);
 	sprintf(respuesta2, "Entrada analogica 2 = %d\n", ana2);
-	imprimir(conexion, respuesta2);
+	imprimir(tipo, respuesta2);
 }
 
 //Funcion encargada de gestionar el menu y todas sus tareas
-void menu(Connection *conexion)
+void menu(Connection *data, int * tipo)
 {
 	char texto[2048];
 	struct tm fecha;
@@ -353,242 +320,210 @@ void menu(Connection *conexion)
 	unsigned long time;
 	int status;
 	Event* eventos;
-	eventos = (*conexion).eventos;
+	eventos = (*data).eventos;
 	while(1){
-		imprimirMenu(conexion);
-		preguntar("Ingrese una opcion\n",texto,conexion);
+		imprimirMenu(tipo);
+  		preguntar("Ingrese una opcion\n",texto,tipo);
 
 		switch (texto[0])
 		{
 			case '1':
-				//Para pasar el sting a time utilizamos la funcion getswf
-				//Para fijar la hora del reloj utilizamos la funcion write_rtc
-				ingresarFecha(&time, conexion);
-				if (controlErroresFecha(time, conexion) == 1)
-				{
-					write_rtc(time);
-					imprimir(conexion, "Fecha actualizada con exito\n");
-				}
-				break;
+			//Para pasar el sting a time utilizamos la funcion getswf
+			//Para fijar la hora del reloj utilizamos la funcion write_rtc
+			ingresarFecha(&time, tipo);
+			if (controlErroresFecha(time, tipo) == 1)
+			{
+				write_rtc(time);
+				imprimir(tipo, "Fecha actualizada con exito\n");
+			}
+			break;
 			case '2':
-				//Para consultar la hora de la placa utilizamos la funcion read_rtc
-				mktm(&fecha, read_rtc());
-				printTime(&fecha, conexion);
-				break;
+			//Para consultar la hora de la placa utilizamos la funcion read_rtc
+			mktm(&fecha, read_rtc());
+			printTime(&fecha, tipo);
+			break;
 			case '3':
-				i = EVENTOS_buscarEspacio(eventos);
-				//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
-				//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
-				//verificando que sean correctos y luego lo creamos
-				//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
-				//todos sus datos
-				if (i == -1)
+			i = EVENTOS_buscarEspacio(eventos);
+			//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
+			//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
+			//verificando que sean correctos y luego lo creamos
+			//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
+			//todos sus datos
+			if (i == -1)
+			{
+				imprimir(tipo, "Capacidad maxima de eventos alcanzada\n");
+			}
+			else
+			{
+				command = 0xFF;
+				param = 0xFF;
+				eventos[i].command = EVENTO_CREANDOSE;
+
+				while (command < '0' || command > '1')
 				{
-					imprimir(conexion, "Capacidad maxima de eventos alcanzada\n");
+					preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
+					command = texto[0];
 				}
-				else
+
+				while (param < '0' || param > '7')
 				{
-					command = 0xFF;
-					param = 0xFF;
-					eventos[i].command = EVENTO_CREANDOSE;
+					preguntar("Ingrese el numero de led (0 al 7)\n", texto, tipo);
+					param = texto[0];
+				}
 
-					while (command < '0' || command > '1')
+				imprimir(tipo, "Se asignara el tiempo del evento ahora:\n");
+				ingresarFecha(&time, tipo);
+				if (controlErroresFecha(time, tipo) == 1)
+				{
+					// Este if es para controlar los datos que el usuario ingresa
+					if ((command == '1' || command == '0') && (param >= '0' && param <= '7'))
 					{
-						preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, conexion);
-						command = texto[0];
-					}
-
-					while (param < '0' || param > '7')
-					{
-						preguntar("Ingrese el numero de led (0 al 7)\n", texto, conexion);
-						param = texto[0];
-					}
-
-					imprimir(conexion, "Se asignara el tiempo del evento ahora:\n");
-					ingresarFecha(&time, conexion);
-					if (controlErroresFecha(time, conexion) == 1)
-					{
-						// Este if es para controlar los datos que el usuario ingresa
-						if ((command == '1' || command == '0') && (param >= '0' && param <= '7'))
-						{
-							eventos[i].command = command;
-							eventos[i].param = param;
-							eventos[i].time = time;
-						}
-						else
-						{
-							eventos[i].command = EVENTO_DESHABILITADO;
-							imprimir(conexion, "Datos erroneos\n");
-						}
+						eventos[i].command = command;
+						eventos[i].param = param;
+						eventos[i].time = time;
 					}
 					else
 					{
 						eventos[i].command = EVENTO_DESHABILITADO;
-						imprimir(conexion, "Fecha erronea\n");
+						imprimir(tipo, "Datos erroneos\n");
 					}
 				}
-				break;
-			case '4':
-				mostrarEventos(eventos, conexion);
-				if (EVENTOS_existen(eventos) == 1)
+				else
 				{
-					i = -1;
-					preguntar("Inserte el indice del evento a eliminar\n", texto, conexion);
-					i = atoi(texto);
-					//Controlamos que el usuario no se vaya de rango para eliminar un evento
-					if (i >= 0 && i < MAX_EVENTOS)
+					eventos[i].command = EVENTO_DESHABILITADO;
+					imprimir(tipo, "Fecha erronea\n");
+				}
+			}
+			break;
+			case '4':
+			mostrarEventos(eventos, tipo);
+			if (EVENTOS_existen(eventos) == 1)
+			{
+				i = -1;
+				preguntar("Inserte el indice del evento a eliminar\n", texto, tipo);
+				i = atoi(texto);
+				//Controlamos que el usuario no se vaya de rango para eliminar un evento
+				if (i >= 0 && i < MAX_EVENTOS)
+				{
+					//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
+					if (eventos[i].command != EVENTO_DESHABILITADO)
 					{
-						//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
-						if (eventos[i].command != EVENTO_DESHABILITADO)
-						{
-							EVENTOS_borrar(&eventos[i]);
-						}
-						else
-						{
-							imprimir(conexion, "Este evento no existe\n");
-						}
+						EVENTOS_borrar(&eventos[i]);
 					}
 					else
 					{
-						imprimir(conexion, "El indice se va de rango de la lista de eventos\n");
+						imprimir(tipo, "Este evento no existe\n");
 					}
 				}
 				else
 				{
-					imprimir(conexion, "No hay eventos creados\n");
+					imprimir(tipo, "El indice se va de rango de la lista de eventos\n");
 				}
-				break;
+			}
+			else
+			{
+				imprimir(tipo, "No hay eventos creados\n");
+			}
+			break;
 			case '5':
-				//Recorremos todos los eventos buscando unicamente los que se encuentren activos
-				//y los imprimimos por consola
-				if (EVENTOS_existen(eventos) == 0)
-				{
-					imprimir(conexion, "No hay eventos creados\n");
-				}
-				else
-				{
-					mostrarEventos(eventos, conexion);
-				}
-				break;
+			//Recorremos todos los eventos buscando unicamente los que se encuentren activos
+			//y los imprimimos por consola
+			if (EVENTOS_existen(eventos) == 0)
+			{
+				imprimir(tipo, "No hay eventos creados\n");
+			}
+			else
+			{
+				mostrarEventos(eventos, tipo);
+			}
+			break;
 			case '6':
-				getInformacionEntradasAnalogicas(conexion);
-				break;
+			getInformacionEntradasAnalogicas(tipo);
+			break;
 			default:
-				imprimir(conexion, "Comando no encontrado");
+			imprimir(tipo, "Comando no encontrado");
 		}
 	}
 }
 
 void matenerEthernet(){
 	while(1){
-		#if DEPURANDO
-			printf("Console: mantenerEthernet\n");
-		#endif
-		tcp_tick(NULL);
-		OSTimeDly(5);
+	  	tcp_tick(NULL);
+	  	OSTimeDlyHMSM(0,0,0,100);
 	}
 }
 
 void consumir(void* data){
-	Event *eventos;
-	eventos = (Event*) data;
 	while(1){
-		#if DEPURANDO
-   		printf("Console: consumir\n");
-		#endif
-		EVENTOS_consumir(eventos);
-		OSTimeDlySec(1);
+		EVENTOS_consumir(data);
+		OSTimeDlyHMSM(0,0,0,100);
 	}
 }
 
 //Establecer la conexi�n
-void iniciarConexion(tcp_Socket *socket)
+void iniciarConexion()
 {
-	int result;
-	#if DEPURANDO
-		printf("Console: inicarConexion %d\n",socket);
-	#endif
-	result=0;
-	while(result == 0){
-		#if DEPURANDO
-			printf("Console: escuchando conexion %d\n",socket);
-		#endif
-		result = tcp_listen(socket, PORT, 0, 0, NULL, 0);
-		OSTimeDly(5);
-	}
-	sock_mode(socket, TCP_MODE_ASCII);
-	while (!sock_established(socket))// && sock_bytesready(socket)==-1)
-	{
-		#if DEPURANDO
-			printf("Console: esperando conexion %d\n",socket);
-		#endif
-		//tcp_tick(NULL);
-		OSTimeDly(5);
-	}
+	sock_init();
+	tcp_listen(&echosock, PORT, 0, 0, NULL, 0);
+	sock_mode(&echosock, TCP_MODE_ASCII);
 }
 
 void iniciarMenuConsola(void* data){
 	INT8U err;
 	Connection *con;
-  con = (Connection*) data;
-	while(1){
-		#if DEPURANDO
-   		printf("Console: iniciarMenuConsola\n");
-		#endif
-
-		menu(data);
-		//OSTimeDlyHMSM(0,0,0,750);
-		OSTimeDly(5);
-	}
+   int tipo;
+   tipo = 0;
+   con = (Connection*)(OSMemGet(CommTxBuf, &err));
+   while(1){
+   	menu(con,&tipo);
+   	OSTimeDlyHMSM(0,0,0,100);
+   }
 }
 
 void iniciarMenuEthernet(void* data){
 	INT8U err;
-	Connection *conexion;
-	conexion = (Connection*) data;
+	Connection *con;
+   int tipo;
+   tipo = 1;
+   con = (Connection*)(OSMemGet(CommTxBuf, &err));
+   con++;
 	while(1){
-		iniciarConexion((*conexion).socket);
-		#if DEPURANDO
-   		printf("Console: iniciarMenuEthernet %d\n",*(*conexion).socket);
-		#endif
-    menu(conexion);
-		//OSTimeDlyHMSM(0,0,0,750);
-		OSTimeDly(5);
+      while (!sock_established(&echosock))
+		{
+			OSTimeDlyHMSM(0,0,0,100);
+   	}
+      menu(con,&tipo);
+   	OSTimeDlyHMSM(0,0,0,100);
    }
 }
 
-Connection conexiones[1+MAX_CLIENTES];
+Connection conexiones[2];
 main()
 {
 	Event eventos[MAX_EVENTOS];
-	INT8U err;
+   INT8U err;
 	Connection *con;
-	int i;
 
 	OSInit();
-	Memoria = OSMemCreate(conexiones,1+MAX_CLIENTES,sizeof(Connection),&err);
+   CommTxBuf = OSMemCreate(conexiones,2,sizeof(Connection),&err);
 
 	HW_init();
-	sock_init();
+	iniciarConexion();
 	EVENTOS_iniciar(eventos);
-	con = (Connection*)(OSMemGet(Memoria, &err));
+   con = (Connection*)(OSMemGet(CommTxBuf, &err));
 	(*con).tipo = 0;
 	(*con).eventos = eventos;
- 	semAskEth = OSSemCreate(0);
+   con++;
+   (*con).tipo = 1;
+	(*con).eventos = eventos;
 
 	printf("Iniciando\n");
 
+	OSTaskCreate(blinkRedLed, NULL, 512, 6);
+	OSTaskCreate(iniciarMenuConsola, NULL, 512, 7);
 	OSTaskCreate(matenerEthernet, NULL, 512, 5);
-	OSTaskCreate(consumir, eventos, 512, 6);
-	OSTaskCreate(blinkRedLed, NULL, 512, 7);
-	OSTaskCreate(iniciarMenuConsola, con, 2048, 8);
-	for(i=0;i<MAX_CLIENTES;i++){
-		con++;
-		(*con).tipo = 1;
-		(*con).eventos = eventos;
-		(*con).socket = &sockClientes[i];
-		OSTaskCreate(iniciarMenuEthernet, con, 2048, i+9);
-	}
+  	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 9);
+   OSTaskCreate(consumir, eventos, 512, 10);
 
 	OSStart();
 }
