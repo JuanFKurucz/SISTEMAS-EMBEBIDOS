@@ -8,28 +8,29 @@
 
 
 void obtenerDatosGps(void *data){
-   char algo[100];
-   int resultado;
-	while(1){
-      resultado = GPS_gets(algo);
-   	printf("%d: %s\n",resultado,algo);
-      OSTimeDlySec(1);
-   }
+  char algo[100];
+  int resultado;
+  while(1){
+    resultado = GPS_gets(algo);
+    printf("%d: %s\n",resultado,algo);
+    OSTimeDlySec(1);
+  }
 }
 
-void leerPuertoD(char[] received, char[] waiting){
-   OSTimeDlyHMSM(0,0,0,100);
-   while( !serDrdUsed() )
-   {
-   	OSTimeDlyHMSM(0,0,0,100);
-   }
-   memset(received, 0, sizeof(received));
-   serDread( received, 100, 100 );
-   if(sizeof(waiting) == 0 || strcmpi(received,waiting)==0){
-   	return 1;
-   } else {
-   	return 0;
-   }
+int leerPuertoD(char received[], char waiting[]){
+  OSTimeDlyHMSM(0,0,0,100);
+  while( !serDrdUsed() )
+  {
+    OSTimeDlyHMSM(0,0,0,100);
+  }
+  memset(received, 0, sizeof(received));
+  serDread( received, 100, 100 );
+  printf("%s == %s",received,waiting);
+  if(sizeof(waiting) == 0 || strcmpi(received,waiting)==0){
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 void prenderModem(){
@@ -45,8 +46,8 @@ void prenderModem(){
 }
 
 void comunicarseModem(char * texto){
- serDputs(texto);
- serDputc('\r');
+  serDputs(texto);
+  serDputc('\r');
 }
 
 void modem(void *data){
@@ -56,69 +57,48 @@ void modem(void *data){
 
   while(1)
   {
-  		status = IO_getInput(PORT_E, BIT_1);
-      while( !status )
-      {
-          BitWrPortI(PEDDR,&PEDDRShadow,OUTPUT_DIR,BIT_4);
-          BitWrPortI(PEDR,&PEDRShadow,0,BIT_4);
-          OSTimeDlySec(2);
-          BitWrPortI(PEDDR,&PEDDRShadow,INPUT_DIR,BIT_4);
-          status = IO_getInput(PORT_E, BIT_1);
-          if (status ) LED_SET(BIT_7);
-          else LED_RESET(BIT_7);
-      }
-      comunicarseModem("A");
-   	OSTimeDlyHMSM(0,0,5,0);
-   	comunicarseModem("AT");
-   	OSTimeDlyHMSM(0,0,0,100);
-      while( !serDrdUsed() )
-      {
-         OSTimeDlyHMSM(0,0,0,100);
-      }
-      memset(received, 0, sizeof(received));
-      serDread( received, 100, 100 );
-      printf(received);
+    status = IO_getInput(PORT_E, BIT_1);
+    while( !status )
+    {
+      BitWrPortI(PEDDR,&PEDDRShadow,OUTPUT_DIR,BIT_4);
+      BitWrPortI(PEDR,&PEDRShadow,0,BIT_4);
+      OSTimeDlySec(2);
+      BitWrPortI(PEDDR,&PEDDRShadow,INPUT_DIR,BIT_4);
+      status = IO_getInput(PORT_E, BIT_1);
+      if (status ) LED_SET(BIT_7);
+      else LED_RESET(BIT_7);
+    }
+    comunicarseModem("A");
+    OSTimeDlyHMSM(0,0,5,0);
+    comunicarseModem("AT");
+    OSTimeDlyHMSM(0,0,0,100);
+    while( !serDrdUsed() )
+    {
+      OSTimeDlyHMSM(0,0,0,100);
+    }
+    memset(received, 0, sizeof(received));
+    serDread( received, 100, 100 );
 
-      comunicarseModem("AT+CPIN?");
+    comunicarseModem("AT+CPIN?");
 
-      if (leerPuertoD(received,"READY")){
-
-      }
-      printf(received);
-
+    if(leerPuertoD(received,"SIM PIN")){
       comunicarseModem("AT+CPIN=5454");
-      leerPuertoD(received)
-
-      printf(received);
-
-      comunicarseModem("AT+CREG?");
-   	OSTimeDlyHMSM(0,0,0,100);
-      while( !serDrdUsed() )
-      {
-         OSTimeDlyHMSM(0,0,0,100);
+      if(leerPuertoD(received,"OK")){
+        comunicarseModem("AT+CREG?");
+        if(leerPuertoD(received,"AT+CREG:0.1")){
+//AT+COPS=
+        }
       }
-      memset(received, 0, sizeof(received));
-      serDread( received, 100, 100 );
-      printf(received);
-      serDread( received, 100, 100 );
-  }
+    }
 
-
-  //prenderModem();
-  while(1){
-	//sserDrdFlush();
-   leerPuertoD(texto);
-  	printf("%s",texto);
-   printf("\nbyewda\n");
-	serDrdFlush();
   }
 }
 
 main(){
-   HW_init();
-	OSInit();
-	//OSTaskCreate(GPS_init, NULL, 512, 1);
-	//OSTaskCreate(obtenerDatosGps, NULL, 512, 5);
-   OSTaskCreate(modem,NULL,512,6);
-   OSStart();
+  HW_init();
+  OSInit();
+  //OSTaskCreate(GPS_init, NULL, 512, 1);
+  //OSTaskCreate(obtenerDatosGps, NULL, 512, 5);
+  OSTaskCreate(modem,NULL,512,6);
+  OSStart();
 }
