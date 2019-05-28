@@ -62,6 +62,13 @@ void HW_init( void )
 	serCopen(PIC_PROTOCOL_BAUDRATE);
 
 	BitWrPortI(PEDDR, &PEDDRShadow, 1, 5);
+
+   // Puerto Serie Modem
+   serDopen(9600);
+   // PWRKEY
+   BitWrPortI(PEDDR,&PEDDRShadow,INPUT_DIR,BIT_4);
+   // STATUS
+   BitWrPortI(PEDDR,&PEDDRShadow,INPUT_DIR,BIT_1);
 }
 
 /*** BeginHeader IO_getInput */

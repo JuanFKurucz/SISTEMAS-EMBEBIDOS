@@ -120,8 +120,8 @@ void preguntar(char *pregunta, char *respuesta, int *tipo)
 //Se imprime la fecha sumandole 1900 al a�o para mostrarlo humanamente
 void printTime(struct tm *fecha, int *tipo)
 {
-	char respuesta[20];
-	sprintf(respuesta, "%d/%d/%d %d:%d:%d\n",
+	char respuesta[MAX_TEXTO];
+	sprintf(respuesta, "02%d/02%d/04%d 02%d:02%d:02%d\n",
 	(*fecha).tm_year + 1900,
 	(*fecha).tm_mon,
 	(*fecha).tm_mday,
@@ -227,7 +227,7 @@ int controlErroresFecha(unsigned long time, int *tipo)
 //Funcion encargada de pedir al usuario ingresar una fecha
 void ingresarFecha(unsigned long *time, int *tipo)
 {
-	char respuesta[2048];
+	char respuesta[MAX_TEXTO];
 	int numeroAnio;
 	int numeroMes;
 	int numeroDia;
@@ -279,7 +279,7 @@ void mostrarEventos(Event *eventos, int *tipo)
 {
 	struct tm fecha;
 	int i;
-	char buffer[2048];
+	char buffer[MAX_TEXTO];
 	for (i = 0; i < MAX_EVENTOS; i++)
 	{
 		if (eventos[i].command != EVENTO_DESHABILITADO)
@@ -312,7 +312,7 @@ void getInformacionEntradasAnalogicas(int *tipo)
 //Funcion encargada de gestionar el menu y todas sus tareas
 void menu(Connection *data, int * tipo)
 {
-	char texto[2048];
+	char texto[MAX_TEXTO];
 	struct tm fecha;
 	char command;
 	char param;
