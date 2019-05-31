@@ -87,8 +87,18 @@ void modem(void *data){
         comunicarseModem("AT+CREG?");
         if(leerPuertoD(received,"AT+CREG:0.1")){
 //AT+COPS=
+        } //cierra if AT+CREG:0.1
+        else{
+        //este es el else de que no puede registrarse en la red
+         comunicarseModem("AT+COPS="); //ACASO ESTO REGISTRA?
         }
+      } // cierra if recibed OK
+      else{
+      // que pasa si no recibe ok
       }
+    } //cierra if sim pin
+    else{
+    // aca es el caso de que el pin ya esta puesto
     }
 
   }
