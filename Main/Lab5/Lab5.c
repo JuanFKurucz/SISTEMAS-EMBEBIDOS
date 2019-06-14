@@ -1,5 +1,19 @@
 /*
 La funcion leerMensajes no se usa para el obligatorio ELIMINAR AL ENTREGAR
+
+Pendientes:
+
+- Memoria volatil
+	Almacenar informacion de checkpoints y datos fragiles del usuario
+		ultimaPresionadaBoton
+		checkPoints marcados
+		lista de checkPoints definida por Ethernet
+- Ethernet (Obtener datos de checkpoints por Ethernet)
+- GPS
+	Obtener latitud y longitud generando el link de google
+	Guardar ultima posicion de GPS constantemente
+	Todos los mensajes enviados deben incluir link de google maps con posicion actual de GPS
+- Comparar posicion GPS con posiciones de checkpoints a demanda de presionar boton
 */
 
 #define OS_TIME_DLY_HMSM_EN 1
