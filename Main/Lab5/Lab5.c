@@ -1,6 +1,5 @@
 /*
 La funcion leerMensajes no se usa para el obligatorio ELIMINAR AL ENTREGAR
-
 */
 
 #define OS_TIME_DLY_HMSM_EN 1
@@ -19,6 +18,13 @@ La funcion leerMensajes no se usa para el obligatorio ELIMINAR AL ENTREGAR
 #define DOUTBUFSIZE 511
 #define MINIMO_RITMO_CARDIACO 1500
 #define MAXIMO_RITMO_CARDIACO 3500
+//#define MAX_TIMEOUT_KEEPALIVE 600000
+#define MAX_TIMEOUT_KEEPALIVE 5
+
+typedef struct Information
+{
+	unsigned long lastPressTime;
+} Info;
 
 void * mensajeMailBox[1];
 OS_EVENT * mailBoxMensajeMuerteModem;
@@ -45,7 +51,7 @@ void modem(void *data);
 void PedidoDeInfoAGPS()
 {
 	GPS_gets(bufferGPS);
-  printf("%s\n",bufferGPS);
+  //printf("%s\n",bufferGPS);
 }
 
 
@@ -327,9 +333,9 @@ void checkGps(void * data){
   while(1){
     PedidoDeInfoAGPS();
     ActualizacionPosicion();
-    printf("Data: %s\n",cadenaGPSFormateada);
+    //printf("Data: %s\n",cadenaGPSFormateada);
     retornarUbicacionGoogleMaps(buffer,cadenaGPSFormateada);
-    printf("%s\n", buffer);
+    //printf("%s\n", buffer);
     OSTimeDlySec(1);
   }
 }
@@ -375,25 +381,43 @@ void botonera(void * data){
       	LED_SET(5);
       }
       if(BTN_GET(6)==0){
-   		printf("hellowda");
+   			printf("hellowda");
     		OSTimeDlySec(1);
       }
-      if(BTN_GET(7)==0){    
-         time = read_rtc();
+      if(BTN_GET(7)==0){
+				 ultimaPresionadaBoton=read_rtc();
+	       LED_RESET(7);
       }
    }
+}
+
+
+void keepAlive(void * data){ //Chequer de que toco el boton cada 10 min
+	unsigned long timeNow;
+	ultimaPresionadaBoton=read_rtc();
+  while(1){
+		timeNow = read_rtc();
+		printf("\nKeepAlive check (%lu-%lu)\n",timeNow,ultimaPresionadaBoton);
+		if(timeNow-ultimaPresionadaBoton >= MAX_TIMEOUT_KEEPALIVE){
+			//Murio
+			printf("\nKeepAlive timeout\n");
+			OSQPost(mailBoxMensajeMuerteModem,"keepAlive");
+    	LED_SET(7);
+		}
+		//OSTimeDlyHMSM(0,10,0,0);
+		OSTimeDlyHMSM(0,0,MAX_TIMEOUT_KEEPALIVE,0);
+	}
 }
 
 main(){
   HW_init();
   OSInit();
-
-
   mailBoxMensajeMuerteModem = OSQCreate(&mensajeMailBox,1);
-  OSTaskCreate(GPS_init, NULL, 512, 1);
+	OSTaskCreate(GPS_init, NULL, 512, 1);
+	OSTaskCreate(keepAlive,NULL, 512,2);
   OSTaskCreate(checkGps, NULL, 512, 3);
   OSTaskCreate(botonera, NULL, 512, 4);
   OSTaskCreate(chequearEstadoDeVida,NULL,512,5);
-  OSTaskCreate(modem,NULL,1024,6);
+	OSTaskCreate(modem,NULL,1024,6);
   OSStart();
 }
