@@ -42,6 +42,7 @@ Todos los mensajes enviados deben incluir link de google maps con posicion actua
 #use EVENTOS.LIB
 #use GPS_Custom.LIB
 
+//Estructura de Checkpoints
 typedef struct CheckPoints
 {
 	float latitud;
@@ -202,6 +203,8 @@ void obtenerDatosGps(void *data){
 	}
 }
 
+//Funcion que chequea que el puerto D no este usado
+//Y lee los datos que se encuentren en el
 int leerPuertoD(char received[]){
 	OSTimeDlyHMSM(0,0,0,100);
 	while( !serDrdUsed() )
@@ -213,6 +216,7 @@ int leerPuertoD(char received[]){
 	OSTimeDlyHMSM(0,0,0,100);
 }
 
+//Funcion que compara dos string
 int isEqual(char* received, char* waiting){
 	//printf("\nComparacion:\n%s==%s\n",received,waiting);
 	if(strstr(received, waiting) != NULL){
@@ -222,12 +226,14 @@ int isEqual(char* received, char* waiting){
 	}
 }
 
+//Funcion que se comunica con el modem
 void comunicarseModem(char * texto){
 	//printf("Comunicando: %s\n",texto);
 	serDputs(texto);
 	serDputc('\r');
 }
 
+//Funcion que habilita el modo texto para luego poder enviar mensajes
 int ponerModoTexto(char* received){
 	//printf("Poner modo texto\n");
 	comunicarseModem("AT+CMGF=1");
@@ -240,6 +246,7 @@ int ponerModoTexto(char* received){
 	return 0;
 }
 
+//Funcion que lee los mensajes recibidos
 int leerMensajes(char * received){
 	//printf("Leer mensajes");
 	comunicarseModem("AT+CMGL=\"ALL\"");
@@ -255,6 +262,7 @@ int leerMensajes(char * received){
 	return 0;
 }
 
+//Funcion que envia Mensajes de texto
 int enviarMensaje(char* received){
 	char buffer[255];
 	if(ponerModoTexto(received) == 1){
@@ -283,6 +291,8 @@ int enviarMensaje(char* received){
 	}
 }
 
+//Funcion que borra los mensajes del celular
+//Forma de liberar la bandeja de entrada
 int borrarMensajes(char * received){
 	//printf("Borrar mensajes");
 	comunicarseModem("AT+CMGDA=\"DEL ALL\"");
@@ -295,6 +305,8 @@ int borrarMensajes(char * received){
 	return 0;
 }
 
+//Funcion que ingresa el pin al chip
+//Nuestro pin es 5454
 int ponerPin(char* received){
 	//printf("Poner Pin");
 	comunicarseModem("AT+CPIN?");
@@ -302,7 +314,7 @@ int ponerPin(char* received){
 	//printf("\nLectura: %s\n", received);
 	if(isEqual(received,"SIM PIN") == 1){
 		//printf("Ingresando pin\n");
-		comunicarseModem("AT+CPIN=5454");      //5454
+		comunicarseModem("AT+CPIN=5454");
 		leerPuertoD(received);
 		//printf("%s", received);
 		if(isEqual(received,"OK") == 1){
@@ -319,6 +331,8 @@ int ponerPin(char* received){
 	return 0;
 }
 
+//Funcion que registra el chip en la red
+//En nuestro caso el registro es para Antel
 int registrarEnRed(char* received){
 	comunicarseModem("AT+CREG?");
 	memset(received, 0, sizeof(received));
@@ -337,6 +351,7 @@ int registrarEnRed(char* received){
 	return 0;
 }
 
+//Funcion que prende el Modem
 void prenderModem(){
 	if (!BitRdPortI(PBDR, 7)){
 		BitWrPortI(PEDDR,&PEDDRShadow,0,4);
@@ -349,6 +364,7 @@ void prenderModem(){
 	BitWrPortI(PEDR,&PEDRShadow, BitRdPortI(PBDR, 7), 0);
 }
 
+//Funcion que contiene diferentes tareas del modem 
 void modem(void *data){
 	char texto[10];
 	int status;
@@ -406,7 +422,7 @@ void modem(void *data){
 }
 }
 
-
+//Funcion que arma el link de ubicacion de google maps
 void retornarUbicacionGoogleMaps(char * buffer, char * cadena){
 	memset(buffer, 0, sizeof(buffer));
 	sprintf(buffer,"http://maps.google.com/?q=%s",cadena);
@@ -446,12 +462,14 @@ int checkPosicion(int id_checkpoint){
 	return 1;
 }
 
+//Funcion que espera la interaccion con los botones marcados como checkpoints
 void interaccionBotonCheckPoint(int id_checkpoint){
 	if(BTN_GET(id_checkpoint)==0 && checkPosicion(id_checkpoint)){
 		LED_SET(id_checkpoint);
 	}
 }
 
+//Funcion que espera la interaccion con los botones
 void botonera(void * data){
 	int i;
 	while(1){
@@ -527,6 +545,7 @@ void miFuncion(void *data){
 
 }
 
+//Funcion que mantiene el Ethernet prendido
 void matenerEthernet(){
 	while(1){
 		tcp_tick(NULL);
