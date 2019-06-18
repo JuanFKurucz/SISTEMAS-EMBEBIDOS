@@ -2,50 +2,66 @@
 La funcion leerMensajes no se usa para el obligatorio ELIMINAR AL ENTREGAR
 
 Pendientes:
-
-- Memoria volatil
-	Almacenar informacion de checkpoints y datos fragiles del usuario
-		ultimaPresionadaBoton
-		checkPoints marcados
-		lista de checkPoints definida por Ethernet
-- Ethernet (Obtener datos de checkpoints por Ethernet)
+					- Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
+					lista de checkPoints definida por Ethernet, checkPoints marcados
+					ultimaPresionadaBoton
+					- Ethernet (Obtener datos de checkpoints por Ethernet)
 - GPS
-	Obtener latitud y longitud generando el link de google
-	Guardar ultima posicion de GPS constantemente
-	Todos los mensajes enviados deben incluir link de google maps con posicion actual de GPS
+Obtener latitud y longitud generando el link de google
+Guardar ultima posicion de GPS constantemente
+Todos los mensajes enviados deben incluir link de google maps con posicion actual de GPS
 - Comparar posicion GPS con posiciones de checkpoints a demanda de presionar boton
 */
 
 #define OS_TIME_DLY_HMSM_EN 1
+#define OS_MEM_EN 1
+#define TCPCONFIG 0
+#define USE_ETHERNET 1
+#define MY_IP_ADDRESS "10.10.6.100"
+#define MY_NETMASK "255.255.255.0"
+#define MY_GATEWAY "10.10.6.2"
+#define MAX_BUFSIZE 2048
+#define PORT 7
+#define OS_TIME_DLY_HMSM_EN 1
 #define OS_TASK_DEL_EN 1
-#memmap xmem
 #define STACK_CNT_1K 1
-#use "ucos2.lib"
-#use IO.LIB
-#use BTN.LIB
-#use LED.LIB
-#use UTILITIES.LIB
-#use EVENTOS.LIB
-#use GPS_Custom.LIB
-
 #define DINBUFSIZE 511
 #define DOUTBUFSIZE 511
 #define MINIMO_RITMO_CARDIACO 1500
 #define MAXIMO_RITMO_CARDIACO 3500
-#define MAX_TIMEOUT_KEEPALIVE 600 //10 minutos en segundos
+#define MAX_TIMEOUT_KEEPALIVE 600		//10 minutos en segundos
 #define PIN_ANALOGICO_CARDIACO 0
+
+#memmap xmem
+#use "ucos2.lib"
+#use "dcrtcp.lib"
+#use IO.LIB
+#use BTN.LIB
+#use LED.LIB
+#use UTILITIES.LIB                                                                                                                             s
+#use EVENTOS.LIB
+#use GPS_Custom.LIB
+
+typedef struct CheckPoints
+{
+	float latitud;
+	float longitud;
+	int estado;
+} CheckPoint;
 
 typedef struct Information
 {
+	CheckPoint* checkpoints;
 	unsigned long lastPressTime;
+	int checker;
 } Info;
 
+tcp_Socket echosock;
 void * mensajeMailBox[1];
 OS_EVENT * mailBoxMensajeMuerteModem;
-char bufferGPS[256];						//String donde se guarda la cadena que envia el GPS
+char bufferGPS[256];									// String donde se guarda la cadena que envia el GPS
 char cadenaGPSFormateada[50];
-GPSPosition posicionGPS;					//Variable que se utiliza para almacenar provisoriamente la posicion en formato GPS
-
+GPSPosition posicionGPS;							// Variable que se utiliza para almacenar provisoriamente la posicion en formato GPS
 unsigned long ultimaPresionadaBoton;
 
 void obtenerDatosGps(void *data);
@@ -60,6 +76,60 @@ int ponerPin(char* received);
 int registrarEnRed(char* received);
 void prenderModem();
 void modem(void *data);
+
+//Funcion que en base al tipo pasado por parametro
+//escribe por consola o por hercules
+//En el caso de que sea un 1 ser? por Hercules
+void imprimirEthernet(char *s)
+{
+	sock_fastwrite(&echosock, s, strlen(s));
+}
+
+//Funcion que imprime una pregunta y espera por la respuesta cargando el texto al puntero de char respuesta
+void preguntar(char *pregunta, char *respuesta)
+{
+	int bytes;
+
+	imprimirEthernet(pregunta);
+	while (tcp_tick(&echosock))
+	{
+		bytes = sock_dataready(&echosock);
+		if (bytes > 0)
+		{
+			if (bytes > MAX_BUFSIZE)
+			{
+				bytes = MAX_BUFSIZE;
+			}
+			sock_fastread(&echosock, respuesta, bytes);
+			sock_flush(&echosock);
+			respuesta[bytes] = '\0';
+			return;
+		}
+		OSTimeDlyHMSM(0,0,0,100);
+	}
+}
+
+//Establecer la conexi?n
+void iniciarConexion()
+{
+	sock_init();
+	tcp_listen(&echosock, PORT, 0, 0, NULL, 0);
+	sock_mode(&echosock, TCP_MODE_ASCII);
+}
+
+void iniciarMenuEthernet(void* data){
+	INT8U err;
+	char respuesta[255];
+
+	while(1){
+		while (!sock_established(&echosock))
+		{
+			OSTimeDlyHMSM(0,0,0,100);
+		}
+		preguntar("hola",respuesta);
+		OSTimeDlyHMSM(0,0,0,100);
+	}
+}
 
 //Funcion para pedir una trama al GPS
 void PedidoDeInfoAGPS()
@@ -354,7 +424,6 @@ void checkGps(void * data){
 	}
 }
 
-
 // Funcion que imprime los valores de las entradas analogicas dependiendo
 // desde donde se pregunta (tipo)
 void chequearEstadoDeVida(void * data)
@@ -420,18 +489,80 @@ void keepAlive(void * data){
 	}
 }
 
+void miFuncion(void *data){
+	CheckPoint lcp[6];
+	Info storedInfo;
+	CheckPoint cp;
+	int i;
+	int r;
+
+	while(1){
+		/*	for(i=0;i<6;i++){
+		lcp[i].latitud = 1.0;
+		lcp[i].longitud = 1.0;
+		lcp[i].estado = 0;
+		printf("Latitud: %f, Longitud: %f, Estado: %d\n", lcp[i].latitud, lcp[i].longitud, lcp[i].estado);
+	}
+
+	storedInfo.checkpoints = lcp;
+	storedInfo.lastPressTime = 0;
+	storedInfo.checker = 1;
+
+	writeUserBlock(1,&storedInfo,sizeof(storedInfo));
+	*/
+	OSTimeDlySec(2);
+
+	r=readUserBlock(&storedInfo,1,sizeof(storedInfo)); //Que es el 1 arbitrario que elegi y si hay que poner otra cosa
+
+	printf("Read: %d",r);
+
+	for(i=0;i<6;i++){
+		cp = (*storedInfo.checkpoints);
+		printf("Latitud: %f, Longitud: %f, Estado: %d\n", cp.latitud, cp.longitud, cp.estado);
+
+		storedInfo.checkpoints++;
+	}
+}
+
+
+}
+
+void matenerEthernet(){
+	while(1){
+		tcp_tick(NULL);
+		OSTimeDlyHMSM(0,0,0,100);
+	}
+}
+
+
 main(){
+	int i;
+
 	HW_init();
 	OSInit();
+	iniciarConexion();
 
+	printf("\nDivision\n");
 	mailBoxMensajeMuerteModem = OSQCreate(&mensajeMailBox,1);
+
+
+	//storedInfo.checkpoints = listaCheckPoints;
+	//storedInfo.lastPressTime = 0;
+	//storedInfo.checker = 1;
+
+	//writeUserBlock(1,&storedInfo,sizeof(storedInfo));
+	//r=readUserBlock(&storedInfo,1,sizeof(storedInfo));
+	// miFuncion();
 
 	OSTaskCreate(GPS_init, NULL, 512, 1);
 	OSTaskCreate(keepAlive,NULL, 512,2);
-	OSTaskCreate(checkGps, NULL, 512, 3);
-	OSTaskCreate(botonera, NULL, 512, 4);
-	OSTaskCreate(chequearEstadoDeVida,NULL,512,5);
-	OSTaskCreate(modem,NULL,1024,6);
+	//OSTaskCreate(checkGps, NULL, 512, 3);
+	//OSTaskCreate(botonera, NULL, 512, 4);
+	//OSTaskCreate(miFuncion, NULL, 512, 7);
+	OSTaskCreate(matenerEthernet, NULL, 512, 5);
+	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 7);
+	//OSTaskCreate(chequearEstadoDeVida,NULL,512,5);
+	//OSTaskCreate(modem,NULL,1024,6);
 
 	OSStart();
 }
