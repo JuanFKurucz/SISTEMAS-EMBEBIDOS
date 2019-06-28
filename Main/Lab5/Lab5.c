@@ -2,10 +2,10 @@
 La funcion leerMensajes no se usa para el obligatorio ELIMINAR AL ENTREGAR
 
 Pendientes:
-					- Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
-					lista de checkPoints definida por Ethernet, checkPoints marcados
-					ultimaPresionadaBoton
-					- Ethernet (Obtener datos de checkpoints por Ethernet)
+- Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
+lista de checkPoints definida por Ethernet, checkPoints marcados
+ultimaPresionadaBoton
+- Ethernet (Obtener datos de checkpoints por Ethernet)
 - GPS
 Obtener latitud y longitud generando el link de google
 Guardar ultima posicion de GPS constantemente
@@ -136,13 +136,16 @@ void iniciarMenuEthernet(void* data){
 void PedidoDeInfoAGPS()
 {
 	GPS_gets(bufferGPS);
-	//printf("%s\n",bufferGPS);
+	printf("%s\n",bufferGPS);
 }
 
 
 int ActualizacionPosicion()
 {
-	return gps_get_position(&posicionGPS, bufferGPS);
+	int a;
+	a=gps_get_position(&posicionGPS, bufferGPS);
+	printf("\nResultado posicion: %d\n",a);
+	return a;
 }
 
 void formateoPosicion(GPSPosition registro)
@@ -364,7 +367,7 @@ void prenderModem(){
 	BitWrPortI(PEDR,&PEDRShadow, BitRdPortI(PBDR, 7), 0);
 }
 
-//Funcion que contiene diferentes tareas del modem 
+//Funcion que contiene diferentes tareas del modem
 void modem(void *data){
 	char texto[10];
 	int status;
@@ -422,20 +425,21 @@ void modem(void *data){
 }
 }
 
-//Funcion que arma el link de ubicacion de google maps
-void retornarUbicacionGoogleMaps(char * buffer, char * cadena){
-	memset(buffer, 0, sizeof(buffer));
-	sprintf(buffer,"http://maps.google.com/?q=%s",cadena);
-}
 
 void checkGps(void * data){
-	char buffer[200];
+	char mensajeTexto[128];
 	while(1){
-		PedidoDeInfoAGPS();
-		ActualizacionPosicion();
-		//printf("Data: %s\n",cadenaGPSFormateada);
-		retornarUbicacionGoogleMaps(buffer,cadenaGPSFormateada);
-		//printf("%s\n", buffer);
+		while (ActualizacionPosicion() < 0)		//Si la informacion es invalida no prosigo
+		{
+			PedidoDeInfoAGPS();
+		}
+		memset(mensajeTexto, 0, sizeof(mensajeTexto));
+		strcat(mensajeTexto, "https://www.google.com/maps/?q=");
+		formateoPosicion(posicionGPS);
+		strcat(mensajeTexto, cadenaGPSFormateada);
+		printf("\n");
+		printf(mensajeTexto);
+		printf("\n");
 		OSTimeDlySec(1);
 	}
 }
@@ -575,11 +579,11 @@ main(){
 
 	OSTaskCreate(GPS_init, NULL, 512, 1);
 	OSTaskCreate(keepAlive,NULL, 512,2);
-	//OSTaskCreate(checkGps, NULL, 512, 3);
-	//OSTaskCreate(botonera, NULL, 512, 4);
+	OSTaskCreate(checkGps, NULL, 512, 3);
+	OSTaskCreate(botonera, NULL, 512, 4);
 	//OSTaskCreate(miFuncion, NULL, 512, 7);
-	OSTaskCreate(matenerEthernet, NULL, 512, 5);
-	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 7);
+	//OSTaskCreate(matenerEthernet, NULL, 512, 5);
+	//OSTaskCreate(iniciarMenuEthernet, NULL, 512, 7);
 	//OSTaskCreate(chequearEstadoDeVida,NULL,512,5);
 	//OSTaskCreate(modem,NULL,1024,6);
 

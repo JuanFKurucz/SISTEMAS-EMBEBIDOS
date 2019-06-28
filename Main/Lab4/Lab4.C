@@ -91,8 +91,8 @@ void preguntar(char *pregunta, char *respuesta, int *tipo)
 	if (*tipo == CONSOLE)
 	{
 		while(getswf(respuesta)==0){
-        OSTimeDlyHMSM(0,0,0,100);
-    	};
+			OSTimeDlyHMSM(0,0,0,100);
+		};
 	}
 	else if (*tipo == ETHERNET)
 	{
@@ -113,8 +113,8 @@ void preguntar(char *pregunta, char *respuesta, int *tipo)
 			OSTimeDlyHMSM(0,0,0,100);
 		}
 	} else {
-    	printf("Se corrompio\n");
-   }
+		printf("Se corrompio\n");
+	}
 }
 
 //Se imprime la fecha sumandole 1900 al a�o para mostrarlo humanamente
@@ -323,133 +323,133 @@ void menu(Connection *data, int * tipo)
 	eventos = (*data).eventos;
 	while(1){
 		imprimirMenu(tipo);
-  		preguntar("Ingrese una opcion\n",texto,tipo);
+		preguntar("Ingrese una opcion\n",texto,tipo);
 
 		switch (texto[0])
 		{
 			case '1':
-			//Para pasar el sting a time utilizamos la funcion getswf
-			//Para fijar la hora del reloj utilizamos la funcion write_rtc
-			ingresarFecha(&time, tipo);
-			if (controlErroresFecha(time, tipo) == 1)
-			{
-				write_rtc(time);
-				imprimir(tipo, "Fecha actualizada con exito\n");
-			}
-			break;
-			case '2':
-			//Para consultar la hora de la placa utilizamos la funcion read_rtc
-			mktm(&fecha, read_rtc());
-			printTime(&fecha, tipo);
-			break;
-			case '3':
-			i = EVENTOS_buscarEspacio(eventos);
-			//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
-			//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
-			//verificando que sean correctos y luego lo creamos
-			//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
-			//todos sus datos
-			if (i == -1)
-			{
-				imprimir(tipo, "Capacidad maxima de eventos alcanzada\n");
-			}
-			else
-			{
-				command = 0xFF;
-				param = 0xFF;
-				eventos[i].command = EVENTO_CREANDOSE;
-
-				while (command < '0' || command > '1')
-				{
-					preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
-					command = texto[0];
-				}
-
-				while (param < '0' || param > '7')
-				{
-					preguntar("Ingrese el numero de led (0 al 7)\n", texto, tipo);
-					param = texto[0];
-				}
-
-				imprimir(tipo, "Se asignara el tiempo del evento ahora:\n");
+				//Para pasar el sting a time utilizamos la funcion getswf
+				//Para fijar la hora del reloj utilizamos la funcion write_rtc
 				ingresarFecha(&time, tipo);
 				if (controlErroresFecha(time, tipo) == 1)
 				{
-					// Este if es para controlar los datos que el usuario ingresa
-					if ((command == '1' || command == '0') && (param >= '0' && param <= '7'))
+					write_rtc(time);
+					imprimir(tipo, "Fecha actualizada con exito\n");
+				}
+				break;
+			case '2':
+				//Para consultar la hora de la placa utilizamos la funcion read_rtc
+				mktm(&fecha, read_rtc());
+				printTime(&fecha, tipo);
+				break;
+			case '3':
+				i = EVENTOS_buscarEspacio(eventos);
+				//Como definimos MAX_EVENTOS en 10, tenemos que controlar que el usuario no supere ese limite
+				//Para que el evento quede correctamente definido, esperamos a tener todos los parametros que el usuario ingrese
+				//verificando que sean correctos y luego lo creamos
+				//De no realizar esto el programa prodria llevar a dar problemas, si se intenta listar un evento que todavia no tenga
+				//todos sus datos
+				if (i == -1)
+				{
+					imprimir(tipo, "Capacidad maxima de eventos alcanzada\n");
+				}
+				else
+				{
+					command = 0xFF;
+					param = 0xFF;
+					eventos[i].command = EVENTO_CREANDOSE;
+
+					while (command < '0' || command > '1')
 					{
-						eventos[i].command = command;
-						eventos[i].param = param;
-						eventos[i].time = time;
+						preguntar("Ingrese 1 para prender un led o ingrese 0 para apagarlo\n", texto, tipo);
+						command = texto[0];
+					}
+
+					while (param < '0' || param > '7')
+					{
+						preguntar("Ingrese el numero de led (0 al 7)\n", texto, tipo);
+						param = texto[0];
+					}
+
+					imprimir(tipo, "Se asignara el tiempo del evento ahora:\n");
+					ingresarFecha(&time, tipo);
+					if (controlErroresFecha(time, tipo) == 1)
+					{
+						// Este if es para controlar los datos que el usuario ingresa
+						if ((command == '1' || command == '0') && (param >= '0' && param <= '7'))
+						{
+							eventos[i].command = command;
+							eventos[i].param = param;
+							eventos[i].time = time;
+						}
+						else
+						{
+							eventos[i].command = EVENTO_DESHABILITADO;
+							imprimir(tipo, "Datos erroneos\n");
+						}
 					}
 					else
 					{
 						eventos[i].command = EVENTO_DESHABILITADO;
-						imprimir(tipo, "Datos erroneos\n");
+						imprimir(tipo, "Fecha erronea\n");
 					}
 				}
-				else
-				{
-					eventos[i].command = EVENTO_DESHABILITADO;
-					imprimir(tipo, "Fecha erronea\n");
-				}
-			}
-			break;
+				break;
 			case '4':
-			mostrarEventos(eventos, tipo);
-			if (EVENTOS_existen(eventos) == 1)
-			{
-				i = -1;
-				preguntar("Inserte el indice del evento a eliminar\n", texto, tipo);
-				i = atoi(texto);
-				//Controlamos que el usuario no se vaya de rango para eliminar un evento
-				if (i >= 0 && i < MAX_EVENTOS)
+				mostrarEventos(eventos, tipo);
+				if (EVENTOS_existen(eventos) == 1)
 				{
-					//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
-					if (eventos[i].command != EVENTO_DESHABILITADO)
+					i = -1;
+					preguntar("Inserte el indice del evento a eliminar\n", texto, tipo);
+					i = atoi(texto);
+					//Controlamos que el usuario no se vaya de rango para eliminar un evento
+					if (i >= 0 && i < MAX_EVENTOS)
 					{
-						EVENTOS_borrar(&eventos[i]);
+						//Lo que hacemos para eliminar nuestro evento es volver a setear los datos como en el estado inicial
+						if (eventos[i].command != EVENTO_DESHABILITADO)
+						{
+							EVENTOS_borrar(&eventos[i]);
+						}
+						else
+						{
+							imprimir(tipo, "Este evento no existe\n");
+						}
 					}
 					else
 					{
-						imprimir(tipo, "Este evento no existe\n");
+						imprimir(tipo, "El indice se va de rango de la lista de eventos\n");
 					}
 				}
 				else
 				{
-					imprimir(tipo, "El indice se va de rango de la lista de eventos\n");
+					imprimir(tipo, "No hay eventos creados\n");
 				}
-			}
-			else
-			{
-				imprimir(tipo, "No hay eventos creados\n");
-			}
-			break;
+				break;
 			case '5':
-			//Recorremos todos los eventos buscando unicamente los que se encuentren activos
-			//y los imprimimos por consola
-			if (EVENTOS_existen(eventos) == 0)
-			{
-				imprimir(tipo, "No hay eventos creados\n");
-			}
-			else
-			{
-				mostrarEventos(eventos, tipo);
-			}
-			break;
+				//Recorremos todos los eventos buscando unicamente los que se encuentren activos
+				//y los imprimimos por consola
+				if (EVENTOS_existen(eventos) == 0)
+				{
+					imprimir(tipo, "No hay eventos creados\n");
+				}
+				else
+				{
+					mostrarEventos(eventos, tipo);
+				}
+				break;
 			case '6':
-			getInformacionEntradasAnalogicas(tipo);
-			break;
+				getInformacionEntradasAnalogicas(tipo);
+				break;
 			default:
-			imprimir(tipo, "Comando no encontrado");
+				imprimir(tipo, "Comando no encontrado");
 		}
 	}
 }
 
 void matenerEthernet(){
 	while(1){
-	  	tcp_tick(NULL);
-	  	OSTimeDlyHMSM(0,0,0,100);
+		tcp_tick(NULL);
+		OSTimeDlyHMSM(0,0,0,100);
 	}
 }
 
@@ -471,50 +471,50 @@ void iniciarConexion()
 void iniciarMenuConsola(void* data){
 	INT8U err;
 	Connection *con;
-   int tipo;
-   tipo = 0;
-   con = (Connection*)(OSMemGet(CommTxBuf, &err));
-   while(1){
-   	menu(con,&tipo);
-   	OSTimeDlyHMSM(0,0,0,100);
-   }
+	int tipo;
+	tipo = 0;
+	con = (Connection*)(OSMemGet(CommTxBuf, &err));
+	while(1){
+		menu(con,&tipo);
+		OSTimeDlyHMSM(0,0,0,100);
+	}
 }
 
 void iniciarMenuEthernet(void* data){
 	INT8U err;
 	Connection *con;
-   int tipo;
-   tipo = 1;
-   con = (Connection*)(OSMemGet(CommTxBuf, &err));
-   con++;
+	int tipo;
+	tipo = 1;
+	con = (Connection*)(OSMemGet(CommTxBuf, &err));
+	con++;
 	while(1){
-      while (!sock_established(&echosock))
+		while (!sock_established(&echosock))
 		{
 			OSTimeDlyHMSM(0,0,0,100);
-   	}
-      menu(con,&tipo);
-   	OSTimeDlyHMSM(0,0,0,100);
-   }
+		}
+		menu(con,&tipo);
+		OSTimeDlyHMSM(0,0,0,100);
+	}
 }
 
 Connection conexiones[2];
 main()
 {
 	Event eventos[MAX_EVENTOS];
-   INT8U err;
+	INT8U err;
 	Connection *con;
 
 	OSInit();
-   CommTxBuf = OSMemCreate(conexiones,2,sizeof(Connection),&err);
+	CommTxBuf = OSMemCreate(conexiones,2,sizeof(Connection),&err);
 
 	HW_init();
 	iniciarConexion();
 	EVENTOS_iniciar(eventos);
-   con = (Connection*)(OSMemGet(CommTxBuf, &err));
+	con = (Connection*)(OSMemGet(CommTxBuf, &err));
 	(*con).tipo = 0;
 	(*con).eventos = eventos;
-   con++;
-   (*con).tipo = 1;
+	con++;
+	(*con).tipo = 1;
 	(*con).eventos = eventos;
 
 	printf("Iniciando\n");
@@ -522,8 +522,8 @@ main()
 	OSTaskCreate(blinkRedLed, NULL, 512, 6);
 	OSTaskCreate(iniciarMenuConsola, NULL, 512, 7);
 	OSTaskCreate(matenerEthernet, NULL, 512, 5);
-  	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 9);
-   OSTaskCreate(consumir, eventos, 512, 10);
+	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 9);
+	OSTaskCreate(consumir, eventos, 512, 10);
 
 	OSStart();
 }
