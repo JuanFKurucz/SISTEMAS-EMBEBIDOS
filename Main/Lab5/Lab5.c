@@ -41,7 +41,7 @@ Todos los mensajes enviados deben incluir link de google maps con posicion actua
 #use UTILITIES.LIB                                                                                                                             s
 #use EVENTOS.LIB
 #use GPS_Custom.LIB
-#use MODEM.LIB
+#use MODEM_Custom.LIB
 
 //Estructura de Checkpoints
 typedef struct CheckPoints
