@@ -41,6 +41,7 @@ Todos los mensajes enviados deben incluir link de google maps con posicion actua
 #use UTILITIES.LIB                                                                                                                             s
 #use EVENTOS.LIB
 #use GPS_Custom.LIB
+#use MODEM.LIB
 
 //Estructura de Checkpoints
 typedef struct CheckPoints
@@ -58,8 +59,6 @@ typedef struct Information
 } Info;
 
 tcp_Socket echosock;
-void * mensajeMailBox[1];
-OS_EVENT * mailBoxMensajeMuerteModem;
 char bufferGPS[256];									// String donde se guarda la cadena que envia el GPS
 char cadenaGPSFormateada[50];
 GPSPosition posicionGPS;							// Variable que se utiliza para almacenar provisoriamente la posicion en formato GPS
@@ -68,15 +67,6 @@ unsigned long ultimaPresionadaBoton;
 void obtenerDatosGps(void *data);
 int leerPuertoD(char received[]);
 int isEqual(char* received, char* waiting);
-void comunicarseModem(char * texto);
-int ponerModoTexto(char* received);
-int borrarMensajes(char * received);
-int leerMensajes(char * received);
-int enviarMensaje(char* received);
-int ponerPin(char* received);
-int registrarEnRed(char* received);
-void prenderModem();
-void modem(void *data);
 
 //Funcion que en base al tipo pasado por parametro
 //escribe por consola o por hercules
@@ -118,6 +108,57 @@ void iniciarConexion()
 	sock_mode(&echosock, TCP_MODE_ASCII);
 }
 
+void cortarString(char * string, int inicio, int fin, char * resultado){
+	int i;
+	for(i=0;i<inicio;i++){
+		string++;
+	}
+	for(i=0;i<fin-inicio;i++){
+		(*resultado)=(*string);
+		resultado++;
+		string++;
+	}
+	(*resultado) = '\0';
+}
+
+
+/*"1	2	.	4	5	;	1	2	.	4	5		/		1		2		.		4		5		;		1		2		.		4		5"
+// 0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20	21	22
+i=0	0,5			5
+i=1 6,11		5*2+1
+i=2	12,17		5*3+2
+i=3 18,23		5*4+3
+*/
+void convertirCheckpoint(char * respuesta){
+	int i;
+	CheckPoint listaCheckPoints[6];
+	char miCorte[6];
+	float datos[12];
+	int largoCorte;
+	memset(listaCheckPoints, 0, sizeof(listaCheckPoints));
+	memset(miCorte, 0, sizeof(miCorte));
+	memset(datos, 0, sizeof(datos));
+	printf(respuesta);
+	printf("\n");
+	for(i=0;i<12;i++){
+		memset(miCorte, 0, sizeof(miCorte));
+		cortarString(respuesta,6*i,5*(i+1)+i,miCorte);
+		printf(miCorte);
+		printf("\n");
+		datos[i] = atof(miCorte);
+	}
+	memset(listaCheckPoints, 0, sizeof(listaCheckPoints));
+	printf("Datos guardados\n");
+	for(i=0;i<12;i+=2){
+		listaCheckPoints[i].latitud=datos[i];
+		listaCheckPoints[i+1].longitud=datos[i+1];
+	}
+	printf("Estructura setteada\n");
+	for(i=0;i<6;i++){
+		printf("Cord %d: %f  %f\n",i,listaCheckPoints[i].latitud,listaCheckPoints[i].longitud);
+	}
+}
+
 void iniciarMenuEthernet(void* data){
 	INT8U err;
 	char respuesta[255];
@@ -127,7 +168,12 @@ void iniciarMenuEthernet(void* data){
 		{
 			OSTimeDlyHMSM(0,0,0,100);
 		}
-		preguntar("hola",respuesta);
+		memset(respuesta,0,sizeof(respuesta));
+		printf("Esperando\n");
+		preguntar("Ingrese",respuesta);
+		printf("Calculando\n");
+		convertirCheckpoint(respuesta);
+		printf("Terminado\n");
 		OSTimeDlyHMSM(0,0,0,100);
 	}
 }
@@ -228,203 +274,6 @@ int isEqual(char* received, char* waiting){
 		return 0;
 	}
 }
-
-//Funcion que se comunica con el modem
-void comunicarseModem(char * texto){
-	//printf("Comunicando: %s\n",texto);
-	serDputs(texto);
-	serDputc('\r');
-}
-
-//Funcion que habilita el modo texto para luego poder enviar mensajes
-int ponerModoTexto(char* received){
-	//printf("Poner modo texto\n");
-	comunicarseModem("AT+CMGF=1");
-	memset(received, 0, sizeof(received));
-	leerPuertoD(received);
-	//printf("%s", received);
-	if(isEqual(received,"OK") == 1){
-		return 1;
-	}
-	return 0;
-}
-
-//Funcion que lee los mensajes recibidos
-int leerMensajes(char * received){
-	//printf("Leer mensajes");
-	comunicarseModem("AT+CMGL=\"ALL\"");
-	memset(received, 0, sizeof(received));
-	leerPuertoD(received);
-	//printf("%s", received);
-	OSTimeDlyHMSM(0,0,0,500);
-
-	if(isEqual(received,"OK") == 1){
-		//borrarMensajes(received);
-		return 1;
-	}
-	return 0;
-}
-
-//Funcion que envia Mensajes de texto
-int enviarMensaje(char* received){
-	char buffer[255];
-	if(ponerModoTexto(received) == 1){
-		//printf("Mandando un mensaje");
-		memset(received, 0, sizeof(received));
-		serDputs("AT+CMGS=\"091829233\"\r");
-		while(!serDrdUsed());
-		memset(received, 0, sizeof(received));
-		leerPuertoD(received);
-		while (isEqual(received,">") != 1)
-		{
-			memset(received, 0, sizeof(received));
-			leerPuertoD(received);
-		}
-		serDputc(0x0D);
-		serDputs("Hellowda");
-		serDputc(0x1A);
-		serDputs("\r");
-		memset(received, 0, sizeof(received));
-		leerPuertoD(received);
-		while(isEqual(received,"OK") != 1){
-			memset(received, 0, sizeof(received));
-			leerPuertoD(received);
-		}
-		//printf("Enviado\n");
-	}
-}
-
-//Funcion que borra los mensajes del celular
-//Forma de liberar la bandeja de entrada
-int borrarMensajes(char * received){
-	//printf("Borrar mensajes");
-	comunicarseModem("AT+CMGDA=\"DEL ALL\"");
-	memset(received, 0, sizeof(received));
-	leerPuertoD(received);
-	//printf("%s", received);
-	if(isEqual(received,"OK") == 1){
-		return 1;
-	}
-	return 0;
-}
-
-//Funcion que ingresa el pin al chip
-//Nuestro pin es 5454
-int ponerPin(char* received){
-	//printf("Poner Pin");
-	comunicarseModem("AT+CPIN?");
-	leerPuertoD(received);
-	//printf("\nLectura: %s\n", received);
-	if(isEqual(received,"SIM PIN") == 1){
-		//printf("Ingresando pin\n");
-		comunicarseModem("AT+CPIN=5454");
-		leerPuertoD(received);
-		//printf("%s", received);
-		if(isEqual(received,"OK") == 1){
-			//printf("Pin ingresado correctamente");
-			return 1;
-		}
-	}
-	else if(isEqual(received,"OK") == 1){
-		//printf("El pin ya esta ingresado");
-		return 1;
-	} else {
-		//printf("Caso no definifido\n");
-	}
-	return 0;
-}
-
-//Funcion que registra el chip en la red
-//En nuestro caso el registro es para Antel
-int registrarEnRed(char* received){
-	comunicarseModem("AT+CREG?");
-	memset(received, 0, sizeof(received));
-	leerPuertoD(received);
-	if(isEqual(received,"0,1") == 1){
-		//printf("Esta registrado en la red Antel");
-		return 1;
-	}
-	else{
-		//Registro para Antel: "AT+COPS=1,2,\"74801\"\r"
-		comunicarseModem("AT+COPS=1,2,\"74801\"");
-		OSTimeDlySec(1);
-		return registrarEnRed(received);
-		//printf("Se registro en la red Antel");
-	}
-	return 0;
-}
-
-//Funcion que prende el Modem
-void prenderModem(){
-	if (!BitRdPortI(PBDR, 7)){
-		BitWrPortI(PEDDR,&PEDDRShadow,0,4);
-		OSTimeDlyHMSM(0,0,0,50);
-		BitWrPortI(PEDDR,&PEDDRShadow,1,4);
-		BitWrPortI(PEDR,&PEDRShadow,0,4);
-		OSTimeDlyHMSM(0,0,2,0);
-		BitWrPortI(PEDDR,&PEDDRShadow,0,4);
-	}
-	BitWrPortI(PEDR,&PEDRShadow, BitRdPortI(PBDR, 7), 0);
-}
-
-//Funcion que contiene diferentes tareas del modem
-void modem(void *data){
-	char texto[10];
-	int status;
-	char received[50];
-	int h;
-	void* punteroMensaje;
-	INT8U timeout;
-	INT8U err;
-	h=0;
-	while(1)
-	{
-		status = IO_getInput(PORT_E, BIT_1);
-		//printf("Status: %d\n",status);
-		while(!status)
-		{
-			//printf("Entre\n");
-			BitWrPortI(PEDDR,&PEDDRShadow,OUTPUT_DIR,BIT_4);
-			BitWrPortI(PEDR,&PEDRShadow,0,BIT_4);
-			OSTimeDlySec(2);
-			BitWrPortI(PEDDR,&PEDDRShadow,INPUT_DIR,BIT_4);
-			status = IO_getInput(PORT_E, BIT_1);
-			//printf("Status: %d\n",status);
-			if (status ) LED_SET(BIT_7);
-			else LED_RESET(BIT_7);
-		}
-		comunicarseModem("A");
-		OSTimeDlyHMSM(0,0,5,0);
-		comunicarseModem("AT");
-		OSTimeDlyHMSM(0,0,0,100);
-		while( !serDrdUsed() )
-		{
-			OSTimeDlyHMSM(0,0,0,100);
-		}
-		timeout = 100;
-		printf("Comprobando cola\n");
-		punteroMensaje = OSQPend(mailBoxMensajeMuerteModem, timeout,&err);
-		if(punteroMensaje != (void *)0){
-			printf("%s\n",punteroMensaje);
-		}
-		leerPuertoD(received);
-		/*
-		if (ponerPin(received) == 1){
-		OSTimeDlyHMSM(0,0,0,100);
-		if(registrarEnRed(received)==1){
-		OSTimeDlyHMSM(0,0,0,100);
-		if(ponerModoTexto(received)==1){
-		OSTimeDlyHMSM(0,0,0,100);
-		if(borrarMensajes(received)==1){
-		OSTimeDlyHMSM(0,0,0,100);
-		//        	enviarMensaje(received);
-	}
-}
-}
-} */
-}
-}
-
 
 void checkGps(void * data){
 	char mensajeTexto[128];
@@ -553,22 +402,19 @@ void miFuncion(void *data){
 void matenerEthernet(){
 	while(1){
 		tcp_tick(NULL);
-		OSTimeDlyHMSM(0,0,0,100);
+		OSTimeDlyHMSM(0,0,0,10);
 	}
 }
 
 
 main(){
 	int i;
-
 	HW_init();
 	OSInit();
 	iniciarConexion();
-
-	printf("\nDivision\n");
 	mailBoxMensajeMuerteModem = OSQCreate(&mensajeMailBox,1);
 
-
+  	printf("Abrite consola\n");
 	//storedInfo.checkpoints = listaCheckPoints;
 	//storedInfo.lastPressTime = 0;
 	//storedInfo.checker = 1;
@@ -577,15 +423,15 @@ main(){
 	//r=readUserBlock(&storedInfo,1,sizeof(storedInfo));
 	// miFuncion();
 
-	OSTaskCreate(GPS_init, NULL, 512, 1);
-	OSTaskCreate(keepAlive,NULL, 512,2);
-	OSTaskCreate(checkGps, NULL, 512, 3);
-	OSTaskCreate(botonera, NULL, 512, 4);
+	//OSTaskCreate(GPS_init, NULL, 512, 1);
+	//OSTaskCreate(keepAlive,NULL, 512,2);
+	//OSTaskCreate(checkGps, NULL, 512, 3);
+	//OSTaskCreate(botonera, NULL, 512, 4);
 	//OSTaskCreate(miFuncion, NULL, 512, 7);
-	//OSTaskCreate(matenerEthernet, NULL, 512, 5);
-	//OSTaskCreate(iniciarMenuEthernet, NULL, 512, 7);
+	OSTaskCreate(matenerEthernet, NULL, 512, 5);
+	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 7);
 	//OSTaskCreate(chequearEstadoDeVida,NULL,512,5);
-	//OSTaskCreate(modem,NULL,1024,6);
+	OSTaskCreate(MODEM_iniciar,NULL,1024,6);
 
 	OSStart();
 }

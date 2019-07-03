@@ -2,10 +2,10 @@
 La funcion leerMensajes no se usa para el obligatorio ELIMINAR AL ENTREGAR
 
 Pendientes:
-					- Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
-					lista de checkPoints definida por Ethernet, checkPoints marcados
-					ultimaPresionadaBoton
-					- Ethernet (Obtener datos de checkpoints por Ethernet)
+- Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
+lista de checkPoints definida por Ethernet, checkPoints marcados
+ultimaPresionadaBoton
+- Ethernet (Obtener datos de checkpoints por Ethernet)
 - GPS
 Obtener latitud y longitud generando el link de google
 Guardar ultima posicion de GPS constantemente
@@ -57,6 +57,7 @@ typedef struct Information
 	int checker;
 } Info;
 
+CheckPoint listaRealCheckPoints[6];
 tcp_Socket echosock;
 void * mensajeMailBox[1];
 OS_EVENT * mailBoxMensajeMuerteModem;
@@ -118,6 +119,28 @@ void iniciarConexion()
 	sock_mode(&echosock, TCP_MODE_ASCII);
 }
 
+void convertirCheckpoint(char * respuesta){
+	int i;
+	char listaCheckPoints[6];
+	char *ptr;
+	char *data;
+	ptr=strtok(respuesta, "/");
+
+	for(i=0;i<6;i++){
+		//memset(data, 0, sizeof(data));
+		data=strtok(ptr, ";");
+		listaRealCheckPoints[i].latitud = atof(data);
+		data++;
+		listaRealCheckPoints[i].latitud = atof(data);
+		ptr++;
+	}
+	//"lat;long/lat;long"
+
+	for(i=0;i<6;i++){
+		printf("Cord %d: %f,%f\n",i,listaRealCheckPoints[i].latitud,listaRealCheckPoints[i].longitud);
+	}
+}
+
 void iniciarMenuEthernet(void* data){
 	INT8U err;
 	char respuesta[255];
@@ -127,7 +150,12 @@ void iniciarMenuEthernet(void* data){
 		{
 			OSTimeDlyHMSM(0,0,0,100);
 		}
-		preguntar("hola",respuesta);
+		memset(respuesta,0,sizeof(respuesta));
+		printf("Esperando\n");
+		preguntar("Ingrese",respuesta);
+		printf("Calculando\n");
+		convertirCheckpoint(respuesta);
+		printf("Terminado\n");
 		OSTimeDlyHMSM(0,0,0,100);
 	}
 }
@@ -136,13 +164,16 @@ void iniciarMenuEthernet(void* data){
 void PedidoDeInfoAGPS()
 {
 	GPS_gets(bufferGPS);
-	//printf("%s\n",bufferGPS);
+	printf("%s\n",bufferGPS);
 }
 
 
 int ActualizacionPosicion()
 {
-	return gps_get_position(&posicionGPS, bufferGPS);
+	int a;
+	a=gps_get_position(&posicionGPS, bufferGPS);
+	printf("\nResultado posicion: %d\n",a);
+	return a;
 }
 
 void formateoPosicion(GPSPosition registro)
@@ -422,32 +453,21 @@ void modem(void *data){
 }
 }
 
-//Funcion que arma el link de ubicacion de google maps
-void retornarUbicacionGoogleMaps(char * buffer){
-	ActualizacionPosicion();
-	strcat(buffer, "https://www.google.com/maps/?q=");
-	formateoPosicion(posicionGPS);
-	strcat(buffer, cadenaGPSFormateada);
-  	printf(buffer);
-  	printf("\n\n");
-}
 
-char mensajeTexto[128];
 void checkGps(void * data){
+	char mensajeTexto[128];
 	while(1){
-   	while (ActualizacionPosicion() < 0)		//Si la informacion es invalida no prosigo
-      {
-         printf(bufferGPS);
-         printf("\n");
-         PedidoDeInfoAGPS();
-      }
-      strcat(mensajeTexto, "https://www.google.com/maps/?q=");
+		while (ActualizacionPosicion() < 0)		//Si la informacion es invalida no prosigo
+		{
+			PedidoDeInfoAGPS();
+		}
+		memset(mensajeTexto, 0, sizeof(mensajeTexto));
+		strcat(mensajeTexto, "https://www.google.com/maps/?q=");
 		formateoPosicion(posicionGPS);
 		strcat(mensajeTexto, cadenaGPSFormateada);
-
-
-  		printf(mensajeTexto);
-  		printf("\n\n");
+		printf("\n");
+		printf(mensajeTexto);
+		printf("\n");
 		OSTimeDlySec(1);
 	}
 }
@@ -561,7 +581,7 @@ void miFuncion(void *data){
 void matenerEthernet(){
 	while(1){
 		tcp_tick(NULL);
-		OSTimeDlyHMSM(0,0,0,100);
+		OSTimeDlyHMSM(0,0,0,10);
 	}
 }
 
@@ -572,8 +592,6 @@ main(){
 	HW_init();
 	OSInit();
 	iniciarConexion();
-
-	printf("\nDivision\n");
 	mailBoxMensajeMuerteModem = OSQCreate(&mensajeMailBox,1);
 
 
@@ -585,13 +603,13 @@ main(){
 	//r=readUserBlock(&storedInfo,1,sizeof(storedInfo));
 	// miFuncion();
 
-	OSTaskCreate(GPS_init, NULL, 512, 1);
-	OSTaskCreate(keepAlive,NULL, 512,2);
-	OSTaskCreate(checkGps, NULL, 512, 3);
-	OSTaskCreate(botonera, NULL, 512, 4);
+	//OSTaskCreate(GPS_init, NULL, 512, 1);
+	//OSTaskCreate(keepAlive,NULL, 512,2);
+	//OSTaskCreate(checkGps, NULL, 512, 3);
+	//OSTaskCreate(botonera, NULL, 512, 4);
 	//OSTaskCreate(miFuncion, NULL, 512, 7);
-	//OSTaskCreate(matenerEthernet, NULL, 512, 5);
-	//OSTaskCreate(iniciarMenuEthernet, NULL, 512, 7);
+	OSTaskCreate(matenerEthernet, NULL, 512, 5);
+	OSTaskCreate(iniciarMenuEthernet, NULL, 512, 7);
 	//OSTaskCreate(chequearEstadoDeVida,NULL,512,5);
 	//OSTaskCreate(modem,NULL,1024,6);
 
