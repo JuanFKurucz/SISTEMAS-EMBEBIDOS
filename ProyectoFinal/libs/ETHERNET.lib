@@ -79,6 +79,7 @@ int ETHERNET_convertirCheckPoints(char * respuesta){
 	for(i=0;i<6;i++){
 		listaCheckPoints[i].latitud=datos[i*2];
 		listaCheckPoints[i].longitud=datos[i*2+1];
+    listaCheckPoints[i].estado = 0;
 	}
   return 0;
 }
@@ -105,7 +106,7 @@ void ETHERNET_main(void* data){
     memset(&storedInfo,0,sizeof(storedInfo));
 		storedInfo.checkpoints = listaCheckPoints;
 		storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
-		if(writeUserBlock(1,&storedInfo,sizeof(storedInfo))!=0){
+		if(writeUserBlock(USERBLOCK_NUMBER,&storedInfo,sizeof(storedInfo))!=0){
 			printf("Couldn't save\n");
 		}
   	OSSemPost(SemaforoInfo);

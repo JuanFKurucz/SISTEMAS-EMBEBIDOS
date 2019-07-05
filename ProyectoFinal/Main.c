@@ -19,6 +19,7 @@ Pendientes:
 #define STACK_CNT_512 8
 #define STACK_CNT_1K 1
 #define STACK_CNT_4K 1
+#define USERBLOCK_NUMBER 1
 
 
 #define DINBUFSIZE 1023
@@ -99,8 +100,8 @@ int checkPosicion(int id_checkpoint){
 	GPS_cords(posicionGPS,coordenadas);
 	#endif
 	OSSemPend(SemaforoInfo, 0, &err);
-	if(fabs(storedInfo.checkpoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
-	fabs(storedInfo.checkpoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
+	if(fabs(listaCheckPoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
+	fabs(listaCheckPoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
 		OSSemPost(SemaforoInfo);
 		return 1;
 	}
@@ -157,6 +158,13 @@ init(){
 	ETHERNET_iniciar();
 	MODEM_init();
 	memset(listaCheckPoints,0,sizeof(listaCheckPoints));
+
+	OSSemPend(SemaforoInfo, 0, &err);
+	readUserBlock(&storedInfo,USERBLOCK_NUMBER,sizeof(storedInfo));
+	if(USERBLOCK_verify(storedInfo.checksum) == 1){
+		memcpy(listaCheckPoints,storedInfo.checkpoints,sizeof(storedInfo.checkpoints));
+	}
+	OSSemPost(SemaforoInfo);
 	#if TESTING
 	memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
 	posicionPrueba=0;
@@ -176,7 +184,6 @@ main(){
 	CheckPoint cp;
 	init();
 
-	OSTaskCreate(USERBLOCK_main, NULL, 512, 4);
 	OSTaskCreate(GPS_init, NULL, 512, 5);
 	OSTaskCreate(keepAlive,NULL, 512, 6);
 	OSTaskCreate(GPS_main, NULL, 512, 7);

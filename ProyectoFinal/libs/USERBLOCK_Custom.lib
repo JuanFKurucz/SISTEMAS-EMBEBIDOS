@@ -1,26 +1,3 @@
-/*** BeginHeader USERBLOCK_main */
-void USERBLOCK_main(void *data);
-/*** EndHeader */
-void USERBLOCK_main(void *data){
-	CheckPoint cp;
-	int i;
-
-	OSSemPend(SemaforoInfo, 0, &err);
-	readUserBlock(&storedInfo,1,sizeof(storedInfo));
-	if(USERBLOCK_verify(storedInfo.checksum) == 0){
-		memset(&storedInfo,0,sizeof(storedInfo));
-		memset(listaCheckPoints,0,sizeof(listaCheckPoints));
-		storedInfo.checkpoints = listaCheckPoints;
-		storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
-		writeUserBlock(1,&storedInfo,sizeof(storedInfo));
-	}
-	OSSemPost(SemaforoInfo);
-	while(1){
-		USERBLOCK_load();
-		OSTimeDlySec(5);
-	}
-}
-
 /*** BeginHeader USERBLOCK_generateCheckSum */
 int USERBLOCK_generateCheckSum();
 /*** EndHeader */
@@ -47,23 +24,4 @@ int USERBLOCK_verify(int sum){
 		return 1;
 	}
 	return 0;
-}
-
-/*** BeginHeader USERBLOCK_load */
-void USERBLOCK_load();
-/*** EndHeader */
-void USERBLOCK_load(){
-	int r;
-	CheckPoint cp;
-	Info sinf;
-	int i;
-	r=readUserBlock(&sinf,1,sizeof(sinf));
-	if(USERBLOCK_verify(sinf.checksum) == 0){
-		printf("Couldn't verify\n");
-		OSSemPend(SemaforoInfo, 0, &err);
-		if(writeUserBlock(1,&storedInfo,sizeof(storedInfo))!=0){
-			printf("Couldn't save\n");
-		}
-		OSSemPost(SemaforoInfo);
-	}
 }
