@@ -118,55 +118,72 @@ int GPS_update()
 	return a;
 }
 
-/*** BeginHeader GPS_format */
-void GPS_format(GPSPosition registro);
+/*** BeginHeader GPS_cords */
+void GPS_cords(GPSPosition registro, float * coordenadas);
 /*** EndHeader */
-void GPS_format(GPSPosition registro)
+void GPS_cords(GPSPosition registro, float * coordenadas)
 {
-	//Asigno nuevas cadenas y numeros temporales sobre los cuales guardar la informacion que se va procesando
-	float lon, lat;
+  float lon, lat;
 	int gradosLatitud, gradosLongitud;
 	char cadenaLongitud[10];
 	char cadenaLatitud[10];
 	char cadenaGradosLongitud[5];
 	char cadenaGradosLatitud[5];
-	//Fin asignacion
+  //Se pasan los minutos de longitud a horas
+  lon = (float)registro.lon_minutes / 60;
+  ftoa(lon, cadenaLongitud);
 
-	//Se pasan los minutos de longitud a horas
-	lon = (float)registro.lon_minutes / 60;
-	ftoa(lon, cadenaLongitud);
+  //Se pasan los minutos de latitud a horas
+  lat = (float)registro.lat_minutes / 60;
+  ftoa(lat, cadenaLatitud);
 
-	//Se pasan los minutos de latitud a horas
-	lat = (float)registro.lat_minutes / 60;
-	ftoa(lat, cadenaLatitud);
+  //Se asignan los grados como positivos o negativos dependiendo el cuadrante
+  gradosLatitud = registro.lat_degrees;
+  if (registro.lat_direction == 'S')
+  {
+    gradosLatitud = gradosLatitud * (-1);
+  }
 
-	//Se asignan los grados como positivos o negativos dependiendo el cuadrante
-	gradosLatitud = registro.lat_degrees;
-	if (registro.lat_direction == 'S')
-	{
-		gradosLatitud = gradosLatitud * (-1);
-	}
-
-	gradosLongitud = registro.lon_degrees;
-	if (registro.lon_direction == 'W')
-	{
-		gradosLongitud = gradosLongitud * (-1);
-	}
-
+  gradosLongitud = registro.lon_degrees;
+  if (registro.lon_direction == 'W')
+  {
+    gradosLongitud = gradosLongitud * (-1);
+  }
 	//Se guardan como cadena los grados
 	itoa(gradosLatitud, cadenaGradosLatitud);
 	itoa(gradosLongitud, cadenaGradosLongitud);
 
-	memset(cadenaGPSFormateada, 0, sizeof(cadenaGPSFormateada));	//Se limpia la cadena para asegurar que no se encuentre basura
-
-	//Se concatenan las cadenas temporales en una cadena global para ser usadas posteriormente
-	strcat(cadenaGPSFormateada, cadenaGradosLatitud);
+  memset(cadenaGPSFormateada, 0, sizeof(cadenaGPSFormateada));	//Se limpia la cadena para asegurar que no se encuentre basura
+  strcat(cadenaGPSFormateada, cadenaGradosLatitud);
 	strcat(cadenaGPSFormateada, ".");
 	strcat(cadenaGPSFormateada, cadenaLatitud);
-	strcat(cadenaGPSFormateada, ",");
+  coordenadas[0]=atof(cadenaGPSFormateada);
+  memset(cadenaGPSFormateada, 0, sizeof(cadenaGPSFormateada));	//Se limpia la cadena para asegurar que no se encuentre basura
 	strcat(cadenaGPSFormateada, cadenaGradosLongitud);
 	strcat(cadenaGPSFormateada, ".");
 	strcat(cadenaGPSFormateada, cadenaLongitud);
+  coordenadas[1]=atof(cadenaGPSFormateada);
+}
+/*** BeginHeader GPS_format */
+void GPS_format(GPSPosition registro);
+/*** EndHeader */
+void GPS_format(GPSPosition registro)
+{
+  float coordenadas[2];
+	char longitud[25];
+	char latitud[25];
+	memset(coordenadas, 0, sizeof(coordenadas));
+
+  GPS_cords(registro,coordenadas);
+  memset(longitud, 0, sizeof(longitud));
+  memset(latitud, 0, sizeof(latitud));
+  sprintf(longitud,"%f",coordenadas[0]);
+  sprintf(latitud,"%f",coordenadas[1]);
+
+  memset(cadenaGPSFormateada, 0, sizeof(coordenadas));
+  strcat(cadenaGPSFormateada, longitud);
+  strcat(cadenaGPSFormateada, ",");
+  strcat(cadenaGPSFormateada, latitud);
 }
 
 /*** BeginHeader GPS_obtenerDatos */

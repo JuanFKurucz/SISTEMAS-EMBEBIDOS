@@ -5,25 +5,26 @@ Pendientes:
 - Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
 lista de checkPoints definida por Ethernet, checkPoints marcados
 ultimaPresionadaBoton
-- Ethernet (Obtener datos de checkpoints por Ethernet)
 - GPS
-Obtener latitud y longitud generando el link de google
-Guardar ultima posicion de GPS constantemente
 Todos los mensajes enviados deben incluir link de google maps con posicion actual de GPS
-- Comparar posicion GPS con posiciones de checkpoints a demanda de presionar boton
 */
+
+#define TESTING 1
+#define CANTIDAD_CHECKPOINTS 6
+#define TOLERANCIA_LATITUD 1.0
+#define TOLERANCIA_LONGITUD 1.0
+#define PRESICION_LATITUD 2
+#define PRESICION_LONGITUD 2
 
 #define OS_TIME_DLY_HMSM_EN 1
 #define OS_MEM_EN 1
 #define OS_TIME_DLY_HMSM_EN 1
 #define OS_TASK_DEL_EN 1
+#define OS_MAX_TASKS 10
 
-#define OS_MAX_TASKS 7
-
-#define STACK_CNT_256 3
 #define STACK_CNT_512 7
 #define STACK_CNT_1K 1
-#define STACK_CNT_2K 1
+#define STACK_CNT_4K 1
 
 
 #define DINBUFSIZE 511
@@ -49,7 +50,12 @@ typedef struct Information
 	int checker;
 } Info;
 
-CheckPoint listaCheckPoints[6];
+#if TESTING
+CheckPoint coordenadasPrueba[3];
+int posicionPrueba;
+#endif
+
+CheckPoint listaCheckPoints[CANTIDAD_CHECKPOINTS];
 
 #memmap xmem
 #use "ucos2.lib"
@@ -88,7 +94,25 @@ void chequearEstadoDeVida(void * data)
 
 
 int checkPosicion(int id_checkpoint){
-	return 1;
+	float coordenadas[2];
+	if(id_checkpoint<0 || id_checkpoint>=CANTIDAD_CHECKPOINTS){
+		return 0;
+	}
+	#if TESTING
+		posicionPrueba = (posicionPrueba+1)%(sizeof(coordenadasPrueba)/sizeof(coordenadasPrueba[0]));
+		coordenadas[0]=coordenadasPrueba[posicionPrueba].latitud;
+		coordenadas[1]=coordenadasPrueba[posicionPrueba].longitud;
+	#else
+		GPS_cords(posicionGPS,coordenadas);
+	#endif
+	printf("%f == %f \n",coordenadas[0],listaCheckPoints[id_checkpoint].latitud);
+	printf("%f == %f \n",coordenadas[1],listaCheckPoints[id_checkpoint].longitud);
+	if(fabs(listaCheckPoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
+		fabs(listaCheckPoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
+		return 1;
+	}
+	printf("Nope\n");
+	return 0;
 }
 
 //Funcion que espera la interaccion con los botones marcados como checkpoints
@@ -114,6 +138,7 @@ void botonera(void * data){
 			ultimaPresionadaBoton=read_rtc();
 			LED_RESET(7);
 		}
+		OSTimeDlyHMSM(0,0,0,50);
 		//printf("Task debugg: botonera end\n");
 	}
 }
@@ -185,6 +210,18 @@ init(){
 	ETHERNET_iniciar();
 	MODEM_init();
 	memset(listaCheckPoints,0,sizeof(listaCheckPoints));
+	#if TESTING
+		memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
+		posicionPrueba=0;
+		coordenadasPrueba[0].latitud = 11.0;
+		coordenadasPrueba[0].longitud = 11.0;
+
+		coordenadasPrueba[1].latitud = 20.0;
+		coordenadasPrueba[1].longitud = 20.0;
+
+		coordenadasPrueba[2].latitud = 15.0;
+		coordenadasPrueba[2].longitud = 15.0;
+	#endif
 }
 main(){
 	init();
@@ -204,9 +241,9 @@ main(){
 	OSTaskCreate(GPS_main, NULL, 512, 7);
 	OSTaskCreate(chequearEstadoDeVida,NULL,512,8);
 	OSTaskCreate(MODEM_main,NULL,1024,9);
-	OSTaskCreate(ETHERNET_main, NULL, 2048, 10);
+	OSTaskCreate(ETHERNET_main, NULL, 4096, 10);
+	OSTaskCreate(botonera, NULL, 512, 11);
 	OSTaskCreate(ETHERNET_mantener, NULL, 512, OS_PRIORIDAD_ETHERNET_MANTENER);
-	OSTaskCreate(botonera, NULL, 256, 12);
 
 	OSStart();
 }
