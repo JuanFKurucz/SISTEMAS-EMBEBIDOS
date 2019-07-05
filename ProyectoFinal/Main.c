@@ -1,7 +1,5 @@
 /*
 Pendientes:
-- Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
-lista de checkPoints definida por Ethernet, checkPoints marcados
 -Chequear mensajes enviados
 */
 
@@ -16,9 +14,9 @@ lista de checkPoints definida por Ethernet, checkPoints marcados
 #define OS_MEM_EN 1
 #define OS_TIME_DLY_HMSM_EN 1
 #define OS_TASK_DEL_EN 1
-#define OS_MAX_TASKS 10
+#define OS_MAX_TASKS 12
 
-#define STACK_CNT_512 7
+#define STACK_CNT_512 8
 #define STACK_CNT_1K 1
 #define STACK_CNT_4K 1
 
@@ -42,7 +40,7 @@ typedef struct CheckPoints
 typedef struct Information
 {
 	CheckPoint* checkpoints;
-	int checker;
+	int checksum;
 } Info;
 
 #if TESTING
@@ -50,6 +48,7 @@ CheckPoint coordenadasPrueba[3];
 int posicionPrueba;
 #endif
 
+Info storedInfo;
 CheckPoint listaCheckPoints[CANTIDAD_CHECKPOINTS];
 
 #memmap xmem
@@ -63,6 +62,7 @@ CheckPoint listaCheckPoints[CANTIDAD_CHECKPOINTS];
 #use GPS_Custom.LIB
 #use MODEM_Custom.LIB
 #use ETHERNET.LIB
+#use USERBLOCK_Custom.LIB
 
 
 
@@ -90,14 +90,14 @@ int checkPosicion(int id_checkpoint){
 		return 0;
 	}
 	#if TESTING
-		posicionPrueba = (posicionPrueba+1)%(sizeof(coordenadasPrueba)/sizeof(coordenadasPrueba[0]));
-		coordenadas[0]=coordenadasPrueba[posicionPrueba].latitud;
-		coordenadas[1]=coordenadasPrueba[posicionPrueba].longitud;
+	posicionPrueba = (posicionPrueba+1)%(sizeof(coordenadasPrueba)/sizeof(coordenadasPrueba[0]));
+	coordenadas[0]=coordenadasPrueba[posicionPrueba].latitud;
+	coordenadas[1]=coordenadasPrueba[posicionPrueba].longitud;
 	#else
-		GPS_cords(posicionGPS,coordenadas);
+	GPS_cords(posicionGPS,coordenadas);
 	#endif
 	if(fabs(listaCheckPoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
-		fabs(listaCheckPoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
+	fabs(listaCheckPoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
 		return 1;
 	}
 	return 0;
@@ -146,44 +146,6 @@ void keepAlive(void * data){
 	}
 }
 
-void miFuncion(void *data){
-	CheckPoint lcp[6];
-	Info storedInfo;
-	CheckPoint cp;
-	int i;
-	int r;
-
-	while(1){
-		/*	for(i=0;i<6;i++){
-		lcp[i].latitud = 1.0;
-		lcp[i].longitud = 1.0;
-		lcp[i].estado = 0;
-		printf("Latitud: %f, Longitud: %f, Estado: %d\n", lcp[i].latitud, lcp[i].longitud, lcp[i].estado);
-	}
-
-	storedInfo.checkpoints = lcp;
-	storedInfo.checker = 1;
-
-	writeUserBlock(1,&storedInfo,sizeof(storedInfo));
-	*/
-	OSTimeDlySec(2);
-
-	r=readUserBlock(&storedInfo,1,sizeof(storedInfo)); //Que es el 1 arbitrario que elegi y si hay que poner otra cosa
-
-	printf("Read: %d",r);
-
-	for(i=0;i<6;i++){
-		cp = (*storedInfo.checkpoints);
-		printf("Latitud: %f, Longitud: %f, Estado: %d\n", cp.latitud, cp.longitud, cp.estado);
-
-		storedInfo.checkpoints++;
-	}
-}
-
-
-}
-
-
 init(){
 	HW_init();
 	OSInit();
@@ -191,29 +153,22 @@ init(){
 	MODEM_init();
 	memset(listaCheckPoints,0,sizeof(listaCheckPoints));
 	#if TESTING
-		memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
-		posicionPrueba=0;
-		coordenadasPrueba[0].latitud = 11.0;
-		coordenadasPrueba[0].longitud = 11.0;
+	memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
+	posicionPrueba=0;
+	coordenadasPrueba[0].latitud = 11.0;
+	coordenadasPrueba[0].longitud = 11.0;
 
-		coordenadasPrueba[1].latitud = 20.0;
-		coordenadasPrueba[1].longitud = 20.0;
+	coordenadasPrueba[1].latitud = 20.0;
+	coordenadasPrueba[1].longitud = 20.0;
 
-		coordenadasPrueba[2].latitud = 15.0;
-		coordenadasPrueba[2].longitud = 15.0;
+	coordenadasPrueba[2].latitud = 15.0;
+	coordenadasPrueba[2].longitud = 15.0;
 	#endif
 }
+
 main(){
 	init();
-	/*
-		storedInfo.checkpoints = listaCheckPoints;
-		storedInfo.checker = 1;
-		writeUserBlock(1,&storedInfo,sizeof(storedInfo));
-		r=readUserBlock(&storedInfo,1,sizeof(storedInfo));
-		miFuncion();
-		OSTaskCreate(miFuncion, NULL, 512, 7);
-	*/
-
+	OSTaskCreate(USERBLOCK_main, NULL, 512, 4);
 	OSTaskCreate(GPS_init, NULL, 512, 5);
 	OSTaskCreate(keepAlive,NULL, 512, 6);
 	OSTaskCreate(GPS_main, NULL, 512, 7);
