@@ -108,19 +108,9 @@ void ETHERNET_main(void* data){
   		ETHERNET_preguntar("Datos guardados correctamente, desea terminar? (s/n)\n",respuesta);
       if(UT_isEqual(respuesta,"s")){
         OSSemPend(SemaforoInfo, 0, &err);
-          memset(&storedInfo,0,sizeof(storedInfo));
-          for(i=0;i<CANTIDAD_CHECKPOINTS;i++){
-            storedInfo.checkpoints[i].longitud = listaCheckPoints[i].longitud;
-            storedInfo.checkpoints[i].latitud = listaCheckPoints[i].latitud;
-            storedInfo.checkpoints[i].estado = 0;
-          }
-      		storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
-          storedInfo.jugando = 1;
-      		if(writeUserBlock(USERBLOCK_NUMBER,&storedInfo,sizeof(storedInfo))!=0){
-      			printf("Couldn't save\n");
-      		}
-          iniciarJuego();
+          USERBLOCK_save();
       	OSSemPost(SemaforoInfo);
+        iniciarJuego();
         ETHERNET_imprimir("Jugador listo, hasta luego\n");
         OSTimeDlyHMSM(0,0,0,500);
         tcp_abort(&echosock);

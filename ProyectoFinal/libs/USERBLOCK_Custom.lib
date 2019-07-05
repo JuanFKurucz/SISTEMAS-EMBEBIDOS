@@ -23,3 +23,23 @@ int USERBLOCK_verify(int sum){
 	}
 	return 0;
 }
+
+/*** BeginHeader USERBLOCK_save */
+int USERBLOCK_save();
+/*** EndHeader */
+int USERBLOCK_save(){
+	int i;
+	memset(&storedInfo,0,sizeof(storedInfo));
+	for(i=0;i<CANTIDAD_CHECKPOINTS;i++){
+		storedInfo.checkpoints[i].longitud = listaCheckPoints[i].longitud;
+		storedInfo.checkpoints[i].latitud = listaCheckPoints[i].latitud;
+		storedInfo.checkpoints[i].estado = listaCheckPoints[i].estado;
+	}
+	storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
+	storedInfo.jugando = 1;
+	if(writeUserBlock(USERBLOCK_NUMBER,&storedInfo,sizeof(storedInfo))!=0){
+		printf("Couldn't save\n");
+		return 0;
+	}
+	return 1;
+}

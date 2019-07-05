@@ -9,6 +9,12 @@ Pendientes:
 #define TOLERANCIA_LONGITUD 1.0
 #define PRESICION_LATITUD 2
 #define PRESICION_LONGITUD 2
+#define MINIMO_RITMO_CARDIACO 50.0
+#define MAXIMO_RITMO_CARDIACO 220.0
+#define MAX_TIMEOUT_KEEPALIVE 600		//10 minutos en segundos
+#define PIN_ANALOGICO_CARDIACO 0
+#define CELLPHONE "091829233"
+#define CODIGO_PIN "5454"
 
 #define OS_TIME_DLY_HMSM_EN 1
 #define OS_MEM_EN 1
@@ -25,10 +31,6 @@ Pendientes:
 #define DINBUFSIZE 1023
 #define DOUTBUFSIZE 1023
 
-#define MINIMO_RITMO_CARDIACO 50.0
-#define MAXIMO_RITMO_CARDIACO 220.0
-#define MAX_TIMEOUT_KEEPALIVE 600		//10 minutos en segundos
-#define PIN_ANALOGICO_CARDIACO 0
 
 //Estructura de Checkpoints
 typedef struct CheckPoints
@@ -106,6 +108,8 @@ int checkPosicion(int id_checkpoint){
 	OSSemPend(SemaforoInfo, 0, &err);
 	if(fabs(listaCheckPoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
 	fabs(listaCheckPoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
+		listaCheckPoints[id_checkpoint].estado = 1;
+		USERBLOCK_save();
 		OSSemPost(SemaforoInfo);
 		return 1;
 	}
@@ -179,13 +183,11 @@ init(){
 	SemaforoMensaje = OSSemCreate(1);
 	readUserBlock(&storedInfo,USERBLOCK_NUMBER,sizeof(storedInfo));
 	if(USERBLOCK_verify(storedInfo.checksum) == 1){
-		printf("Se guardo correctamente\n");
 		memcpy(listaCheckPoints,storedInfo.checkpoints,sizeof(storedInfo.checkpoints));
-		printf("Se guardo correctamente\n");
 		for(i=0;i<6;i++){
-			printf("Datos: %f %f\n",
-				listaCheckPoints[i].longitud,
-				listaCheckPoints[i].latitud);
+			if(listaCheckPoints[i].estado == 1){
+				LED_SET(i);
+			}
 		}
 		if(storedInfo.jugando==1){
 			iniciarJuego();
