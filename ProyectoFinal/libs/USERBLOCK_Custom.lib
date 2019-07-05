@@ -7,7 +7,7 @@ int USERBLOCK_generateCheckSum(){
 	CheckPoint * lista;
 	lista=storedInfo.checkpoints;
 	result = 0;
-	for (i = 0; i < 6; i++){
+	for (i = 0; i < CANTIDAD_CHECKPOINTS; i++){
 		result += (*lista).estado;
 		lista++;
 	}

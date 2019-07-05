@@ -19,7 +19,7 @@ Pendientes:
 #define STACK_CNT_512 8
 #define STACK_CNT_1K 1
 #define STACK_CNT_4K 1
-#define USERBLOCK_NUMBER 1
+#define USERBLOCK_NUMBER 0
 
 
 #define DINBUFSIZE 1023
@@ -40,7 +40,8 @@ typedef struct CheckPoints
 
 typedef struct Information
 {
-	CheckPoint* checkpoints;
+	CheckPoint checkpoints[CANTIDAD_CHECKPOINTS];
+	int jugando;
 	int checksum;
 } Info;
 
@@ -159,7 +160,16 @@ void keepAlive(void * data){
 	}
 }
 
+iniciarJuego(){
+	OSTaskCreate(GPS_main, NULL, 512, 7);
+	OSTaskCreate(keepAlive,NULL, 512, 6);
+	OSTaskCreate(chequearEstadoDeVida,NULL,512,8);
+	OSTaskCreate(botonera, NULL, 512, 11);
+	OSTaskCreate(MODEM_main,NULL,1024,9);
+}
+
 init(){
+	int i;
 	HW_init();
 	OSInit();
 	ETHERNET_iniciar();
@@ -169,7 +179,17 @@ init(){
 	SemaforoMensaje = OSSemCreate(1);
 	readUserBlock(&storedInfo,USERBLOCK_NUMBER,sizeof(storedInfo));
 	if(USERBLOCK_verify(storedInfo.checksum) == 1){
+		printf("Se guardo correctamente\n");
 		memcpy(listaCheckPoints,storedInfo.checkpoints,sizeof(storedInfo.checkpoints));
+		printf("Se guardo correctamente\n");
+		for(i=0;i<6;i++){
+			printf("Datos: %f %f\n",
+				listaCheckPoints[i].longitud,
+				listaCheckPoints[i].latitud);
+		}
+		if(storedInfo.jugando==1){
+			iniciarJuego();
+		}
 	}
 	#if TESTING
 		memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
@@ -191,12 +211,7 @@ main(){
 	printf("Start\n");
 	init();
 	OSTaskCreate(GPS_init, NULL, 512, 5);
-	OSTaskCreate(keepAlive,NULL, 512, 6);
-	OSTaskCreate(GPS_main, NULL, 512, 7);
-	OSTaskCreate(chequearEstadoDeVida,NULL,512,8);
-	OSTaskCreate(MODEM_main,NULL,1024,9);
 	OSTaskCreate(ETHERNET_main, NULL, 4096, 10);
-	OSTaskCreate(botonera, NULL, 512, 11);
 	OSTaskCreate(ETHERNET_mantener, NULL, 512, OS_PRIORIDAD_ETHERNET_MANTENER);
 	OSStart();
 }
