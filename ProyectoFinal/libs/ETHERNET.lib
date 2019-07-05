@@ -88,7 +88,8 @@ void ETHERNET_main(void *data);
 /*** EndHeader */
 void ETHERNET_main(void* data){
 	char respuesta[MAX_BUFSIZE];
-  int err;
+  int error;
+  Info * inf;
 
 	while(1){
 		while (!sock_established(&echosock))
@@ -98,8 +99,17 @@ void ETHERNET_main(void* data){
 		memset(respuesta,0,sizeof(respuesta));
 		ETHERNET_preguntar("Ingrese los datos (Nlat;Elon/Slat;Wlong/Nlat;Wlong/Slat;Elong/Slat;Wlong/Nlat;Wlong)\n",respuesta);
   	ETHERNET_imprimir("Calculando\n");
-		err=ETHERNET_convertirCheckPoints(respuesta);
-    if(err == 0){
+		error=ETHERNET_convertirCheckPoints(respuesta);
+
+  	OSSemPend(SemaforoInfo, 0, &err);
+    memset(&storedInfo,0,sizeof(storedInfo));
+		storedInfo.checkpoints = listaCheckPoints;
+		storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
+		if(writeUserBlock(1,&storedInfo,sizeof(storedInfo))!=0){
+			printf("Couldn't save\n");
+		}
+  	OSSemPost(SemaforoInfo);
+    if(error == 0){
       memset(respuesta,0,sizeof(respuesta));
   		ETHERNET_preguntar("Datos guardados correctamente, desea terminar? (s/n)\n",respuesta);
       if(UT_isEqual(respuesta,"s")){

@@ -21,8 +21,8 @@ Pendientes:
 #define STACK_CNT_4K 1
 
 
-#define DINBUFSIZE 511
-#define DOUTBUFSIZE 511
+#define DINBUFSIZE 1023
+#define DOUTBUFSIZE 1023
 
 #define MINIMO_RITMO_CARDIACO 50.0
 #define MAXIMO_RITMO_CARDIACO 220.0
@@ -64,7 +64,8 @@ CheckPoint listaCheckPoints[CANTIDAD_CHECKPOINTS];
 #use ETHERNET.LIB
 #use USERBLOCK_Custom.LIB
 
-
+OS_EVENT * SemaforoInfo;
+INT8U err;
 
 unsigned long ultimaPresionadaBoton;
 
@@ -86,6 +87,7 @@ void chequearEstadoDeVida(void * data)
 
 int checkPosicion(int id_checkpoint){
 	float coordenadas[2];
+	Info * inf;
 	if(id_checkpoint<0 || id_checkpoint>=CANTIDAD_CHECKPOINTS){
 		return 0;
 	}
@@ -96,10 +98,13 @@ int checkPosicion(int id_checkpoint){
 	#else
 	GPS_cords(posicionGPS,coordenadas);
 	#endif
-	if(fabs(listaCheckPoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
-	fabs(listaCheckPoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
+	OSSemPend(SemaforoInfo, 0, &err);
+	if(fabs(storedInfo.checkpoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
+	fabs(storedInfo.checkpoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
+		OSSemPost(SemaforoInfo);
 		return 1;
 	}
+	OSSemPost(SemaforoInfo);
 	return 0;
 }
 
@@ -167,7 +172,10 @@ init(){
 }
 
 main(){
+	int i;
+	CheckPoint cp;
 	init();
+
 	OSTaskCreate(USERBLOCK_main, NULL, 512, 4);
 	OSTaskCreate(GPS_init, NULL, 512, 5);
 	OSTaskCreate(keepAlive,NULL, 512, 6);
@@ -177,6 +185,5 @@ main(){
 	OSTaskCreate(ETHERNET_main, NULL, 4096, 10);
 	OSTaskCreate(botonera, NULL, 512, 11);
 	OSTaskCreate(ETHERNET_mantener, NULL, 512, OS_PRIORIDAD_ETHERNET_MANTENER);
-
 	OSStart();
 }
