@@ -103,12 +103,12 @@ void ETHERNET_main(void* data){
 		error=ETHERNET_convertirCheckPoints(respuesta);
 
   	OSSemPend(SemaforoInfo, 0, &err);
-    memset(&storedInfo,0,sizeof(storedInfo));
-		storedInfo.checkpoints = listaCheckPoints;
-		storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
-		if(writeUserBlock(USERBLOCK_NUMBER,&storedInfo,sizeof(storedInfo))!=0){
-			printf("Couldn't save\n");
-		}
+      memset(&storedInfo,0,sizeof(storedInfo));
+  		storedInfo.checkpoints = listaCheckPoints;
+  		storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
+  		if(writeUserBlock(USERBLOCK_NUMBER,&storedInfo,sizeof(storedInfo))!=0){
+  			printf("Couldn't save\n");
+  		}
   	OSSemPost(SemaforoInfo);
     if(error == 0){
       memset(respuesta,0,sizeof(respuesta));

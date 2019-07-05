@@ -5,14 +5,12 @@ int USERBLOCK_generateCheckSum(){
 	int result;
 	int i;
 	CheckPoint * lista;
-	OSSemPend(SemaforoInfo, 0, &err);
 	lista=storedInfo.checkpoints;
 	result = 0;
 	for (i = 0; i < 6; i++){
 		result += (*lista).estado;
 		lista++;
 	}
-	OSSemPost(SemaforoInfo);
 	return result;
 }
 

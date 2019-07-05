@@ -66,6 +66,7 @@ CheckPoint listaCheckPoints[CANTIDAD_CHECKPOINTS];
 #use USERBLOCK_Custom.LIB
 
 OS_EVENT * SemaforoInfo;
+OS_EVENT * SemaforoMensaje;
 INT8U err;
 
 unsigned long ultimaPresionadaBoton;
@@ -78,7 +79,9 @@ void chequearEstadoDeVida(void * data)
 	while(1){
 		valorAnalogico = ((float)IO_getAnalogInput(PIN_ANALOGICO_CARDIACO))*0.073;
 		if(valorAnalogico<MINIMO_RITMO_CARDIACO || valorAnalogico>MAXIMO_RITMO_CARDIACO){
+			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"sepuku");
+			OSSemPost(SemaforoMensaje);
 			OSTimeDlySec(60);
 		}
 		OSTimeDlySec(1);
@@ -124,7 +127,9 @@ void botonera(void * data){
 			interaccionBotonCheckPoint(i);
 		}
 		if(BTN_GET(6)==0){
+			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"help");
+			OSSemPost(SemaforoMensaje);
 			OSTimeDlySec(1);
 		}
 		if(BTN_GET(7)==0){
@@ -145,7 +150,9 @@ void keepAlive(void * data){
 		timeNow = read_rtc();
 		if(timeNow-ultimaPresionadaBoton >= MAX_TIMEOUT_KEEPALIVE){
 			//Murio
+			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"keepAlive");
+			OSSemPost(SemaforoMensaje);
 			LED_SET(7);
 		}
 		OSTimeDlySec(MAX_TIMEOUT_KEEPALIVE);
@@ -158,32 +165,31 @@ init(){
 	ETHERNET_iniciar();
 	MODEM_init();
 	memset(listaCheckPoints,0,sizeof(listaCheckPoints));
-
-	OSSemPend(SemaforoInfo, 0, &err);
+	SemaforoInfo = OSSemCreate(1);
+	SemaforoMensaje = OSSemCreate(1);
 	readUserBlock(&storedInfo,USERBLOCK_NUMBER,sizeof(storedInfo));
 	if(USERBLOCK_verify(storedInfo.checksum) == 1){
 		memcpy(listaCheckPoints,storedInfo.checkpoints,sizeof(storedInfo.checkpoints));
 	}
-	OSSemPost(SemaforoInfo);
 	#if TESTING
-	memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
-	posicionPrueba=0;
-	coordenadasPrueba[0].latitud = 11.0;
-	coordenadasPrueba[0].longitud = 11.0;
+		memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
+		posicionPrueba=0;
+		coordenadasPrueba[0].latitud = 11.0;
+		coordenadasPrueba[0].longitud = 11.0;
 
-	coordenadasPrueba[1].latitud = 20.0;
-	coordenadasPrueba[1].longitud = 20.0;
+		coordenadasPrueba[1].latitud = 20.0;
+		coordenadasPrueba[1].longitud = 20.0;
 
-	coordenadasPrueba[2].latitud = 15.0;
-	coordenadasPrueba[2].longitud = 15.0;
+		coordenadasPrueba[2].latitud = 15.0;
+		coordenadasPrueba[2].longitud = 15.0;
 	#endif
 }
 
 main(){
 	int i;
 	CheckPoint cp;
+	printf("Start\n");
 	init();
-
 	OSTaskCreate(GPS_init, NULL, 512, 5);
 	OSTaskCreate(keepAlive,NULL, 512, 6);
 	OSTaskCreate(GPS_main, NULL, 512, 7);

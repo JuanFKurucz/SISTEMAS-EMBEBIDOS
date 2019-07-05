@@ -47,20 +47,51 @@ void MODEM_main(void *data){
 			OSTimeDlyHMSM(0,0,0,100);
 		}
 		timeout = 100;
+		OSSemPend(SemaforoMensaje, 0, &err);
 		punteroMensaje = OSQPend(mailBoxMensajeMuerteModem, timeout,&err);
+		OSSemPost(SemaforoMensaje);
 		IO_leerPuertoD(received);
-
-		if (MODEM_ponerPin(received) == 1){
-			OSTimeDlyHMSM(0,0,0,100);
-			if(MODEM_registrarRed(received)==1){
+		if(punteroMensaje  == (void *)0){
+			printf("No hay mensaje\n");
+		} else {
+			printf("Mensaje nuevo\n");
+			if (MODEM_ponerPin(received) == 1){
+				printf("Pin puesto\n");
 				OSTimeDlyHMSM(0,0,0,100);
-				if(MODEM_modoTexto(received)==1){
+				if(MODEM_registrarRed(received)==1){
+					printf("Red registrada\n");
 					OSTimeDlyHMSM(0,0,0,100);
-					if(MODEM_borrarMensajes(received)==1){
+					if(MODEM_modoTexto(received)==1){
+						printf("Modo texto puesto\n");
 						OSTimeDlyHMSM(0,0,0,100);
-						MODEM_enviarMensajes(received);
+						if(MODEM_borrarMensajes(received)==1){
+							printf("Mensajes borrados\n");
+							OSTimeDlyHMSM(0,0,0,100);
+							MODEM_enviarMensajes(received);
+							printf("Enviado final\n");
+						} else {
+							printf("Error al borrar mensajes\n");
+							OSSemPend(SemaforoMensaje, 0, &err);
+							OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
+							OSSemPost(SemaforoMensaje);
+						}
+					} else {
+						printf("Error al poner modo texto\n");
+						OSSemPend(SemaforoMensaje, 0, &err);
+						OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
+						OSSemPost(SemaforoMensaje);
 					}
+				} else {
+					printf("Error al registrar en la red\n");
+					OSSemPend(SemaforoMensaje, 0, &err);
+					OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
+					OSSemPost(SemaforoMensaje);
 				}
+			} else {
+				printf("Error al poner el pin\n");
+				OSSemPend(SemaforoMensaje, 0, &err);
+				OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
+				OSSemPost(SemaforoMensaje);
 			}
 		}
 	}
@@ -98,7 +129,7 @@ int MODEM_enviarMensajes(char* received);
 //Funcion que envia Mensajes de texto
 int MODEM_enviarMensajes(char* received){
 	char buffer[255];
-	char mensajeTexto[128];
+	char mensajeTexto[255];
 	if(MODEM_modoTexto(received) == 1){
 		memset(received, 0, sizeof(received));
 		serDputs("AT+CMGS=\"091829233\"\r");
@@ -112,9 +143,10 @@ int MODEM_enviarMensajes(char* received){
 		}
 		serDputc(0x0D);
 		memset(mensajeTexto, 0, sizeof(mensajeTexto));
-		strcat(mensajeTexto, "https://www.google.com/maps/place/"); //link mejorado que funciona directamente con nuestra estructura de lat,long
+		strcat(mensajeTexto, "Un jugador necesita asistencia en https://www.google.com/maps/place/"); //link mejorado que funciona directamente con nuestra estructura de lat,long
 		GPS_format(posicionGPS);
 		strcat(mensajeTexto, cadenaGPSFormateada);
+		printf("%s\n",mensajeTexto);
 		serDputs(mensajeTexto);
 		serDputc(0x1A);
 		serDputs("\r");
@@ -124,6 +156,7 @@ int MODEM_enviarMensajes(char* received){
 			memset(received, 0, sizeof(received));
 			IO_leerPuertoD(received);
 		}
+		printf("Enviado\n");
 	}
 }
 
@@ -145,6 +178,7 @@ int MODEM_borrarMensajes(char * received){
 
 /*** BeginHeader MODEM_ponerPin */
 int MODEM_ponerPin(char* received);
+
 /*** EndHeader */
 //Funcion que ingresa el pin al chip
 //Nuestro pin es 5454
