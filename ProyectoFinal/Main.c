@@ -34,18 +34,6 @@ Todos los mensajes enviados deben incluir link de google maps con posicion actua
 #define MAX_TIMEOUT_KEEPALIVE 600		//10 minutos en segundos
 #define PIN_ANALOGICO_CARDIACO 0
 
-#memmap xmem
-#use "ucos2.lib"
-#use ETHERNET_Config.LIB
-#use "dcrtcp.lib"
-#use IO.LIB
-#use BTN.LIB
-#use LED.LIB
-#use UTILITIES.LIB
-#use GPS_Custom.LIB
-#use MODEM_Custom.LIB
-#use ETHERNET.LIB
-
 //Estructura de Checkpoints
 typedef struct CheckPoints
 {
@@ -61,46 +49,23 @@ typedef struct Information
 	int checker;
 } Info;
 
+CheckPoint listaCheckPoints[6];
+
+#memmap xmem
+#use "ucos2.lib"
+#use ETHERNET_Config.LIB
+#use "dcrtcp.lib"
+#use IO.LIB
+#use BTN.LIB
+#use LED.LIB
+#use UTILITIES.LIB
+#use GPS_Custom.LIB
+#use MODEM_Custom.LIB
+#use ETHERNET.LIB
+
+
+
 unsigned long ultimaPresionadaBoton;
-
-
-
-/*"1	2	.	4	5	;	1	2	.	4	5		/		1		2		.		4		5		;		1		2		.		4		5"
-// 0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20	21	22
-i=0	0,5			5
-i=1 6,11		5*2+1
-i=2	12,17		5*3+2
-i=3 18,23		5*4+3
-*/
-void convertirCheckpoint(char * respuesta){
-	int i;
-	CheckPoint listaCheckPoints[6];
-	char miCorte[6];
-	float datos[12];
-	int largoCorte;
-	memset(listaCheckPoints, 0, sizeof(listaCheckPoints));
-	memset(miCorte, 0, sizeof(miCorte));
-	memset(datos, 0, sizeof(datos));
-	printf(respuesta);
-	printf("\n");
-	for(i=0;i<12;i++){
-		memset(miCorte, 0, sizeof(miCorte));
-		UT_cortarString(respuesta,6*i,5*(i+1)+i,miCorte);
-		printf(miCorte);
-		printf("\n");
-		datos[i] = atof(miCorte);
-	}
-	memset(listaCheckPoints, 0, sizeof(listaCheckPoints));
-	printf("Datos guardados\n");
-	for(i=0;i<12;i+=2){
-		listaCheckPoints[i].latitud=datos[i];
-		listaCheckPoints[i+1].longitud=datos[i+1];
-	}
-	printf("Estructura setteada\n");
-	for(i=0;i<6;i++){
-		printf("Cord %d: %f  %f\n",i,listaCheckPoints[i].latitud,listaCheckPoints[i].longitud);
-	}
-}
 
 // Funcion que imprime los valores de las entradas analogicas dependiendo
 // desde donde se pregunta (tipo)
@@ -213,14 +178,13 @@ void miFuncion(void *data){
 
 }
 
+
 init(){
 	HW_init();
 	OSInit();
 	ETHERNET_iniciar();
 	MODEM_init();
 }
-
-
 main(){
 	init();
 	printf("Abrite consola\n");

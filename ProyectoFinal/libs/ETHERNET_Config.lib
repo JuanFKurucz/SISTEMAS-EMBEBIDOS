@@ -4,6 +4,6 @@
 #define MY_IP_ADDRESS "10.10.6.100"
 #define MY_NETMASK "255.255.255.0"
 #define MY_GATEWAY "10.10.6.2"
-#define MAX_BUFSIZE 2048
+#define MAX_BUFSIZE 1024
 #define PORT 7
 /*** EndHeader */
