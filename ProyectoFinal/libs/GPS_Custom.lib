@@ -1,0 +1,205 @@
+int ActualizacionPosicion();
+/*** BeginHeader */
+#use GPS.lib
+
+#define BINBUFSIZE 		      	255
+#define BOUTBUFSIZE 		  	255
+#define SERB_USEPORTD
+#define GPS_MAX_BUF_SIZE	  	100
+#define GPS_CHKSUM_SIZE	    	2
+#define GPS_CONFIG_DELAY 	  	10
+#define GPS_VALID_DATA_IDX		18
+#define GPS_VALID_DATA		  	'A'
+#define GPS_VOID_DATA		    'V'
+
+GPSPosition gpsPosition;
+char bufferGPS[256];									// String donde se guarda la cadena que envia el GPS
+char cadenaGPSFormateada[50];
+GPSPosition posicionGPS;							// Variable que se utiliza para almacenar provisoriamente la posicion en formato GPS
+
+/*** EndHeader */
+
+/*** BeginHeader GPS_init */
+void GPS_init( void );
+/*** EndHeader */
+
+void GPS_init( void )
+{
+  printf("Task debugg: GPS_init start\n");
+  BitWrPortI( PDDDR, &PDDDRShadow, 0, 5 ); //Bit 5 como entrada (ARXB)
+  BitWrPortI( PDFR, &PDFRShadow, 1, 4 );	 //Bit 4 con funcion alternativa (ATXB)
+  serBdatabits( PARAM_8BIT );		           //8 bits de datos
+  serBparity( PARAM_NOPARITY ); 		       //Sin paridad
+  serBopen( 9600 ); 			                 //Baud rate = 9600bps
+  serBrdFlush();
+  serBwrFlush();
+
+	OSTimeDlyHMSM(0,0,0,100);
+	serBputs("$PSRF103,00,00,00,01*24\r\n");	//GGA - off
+	OSTimeDlyHMSM(0,0,0,100);
+	serBputs("$PSRF103,01,00,00,01*25\r\n");	//GLL - off
+	OSTimeDlyHMSM(0,0,0,100);
+	serBputs("$PSRF103,02,00,00,01*26\r\n");	//GSA - off
+	OSTimeDlyHMSM(0,0,0,100);
+	serBputs("$PSRF103,03,00,00,01*27\r\n");	//GSV - off
+	OSTimeDlyHMSM(0,0,0,100);
+	serBputs("$PSRF103,04,00,01,01*21\r\n");	//RMC - on y enviando la trama cada 1 seg
+	OSTimeDlyHMSM(0,0,0,100);
+	serBputs("$PSRF103,05,00,00,01*21\r\n");	//VTG - off
+	OSTimeDlyHMSM(0,0,0,100);
+	serBputs("$PSRF103,08,00,00,01*2C\r\n");	//ZDA - off
+
+  printf("Task debugg: GPS_init end\n");
+  OSTaskDel(OS_PRIO_SELF);
+}
+
+/*** BeginHeader GPS_gets */
+int GPS_gets( char* p_str );
+/*** EndHeader */
+int GPS_gets( char* p_str )
+{
+  char data[GPS_MAX_BUF_SIZE];
+  char* start;
+  char* end;
+
+  serBrdFlush();
+
+  OSTimeDlyHMSM(0,0,1,500); // Espero a recibir por lo menos una trama
+
+  if (serBrdUsed() == 0)
+  {
+    return -1;
+  }
+
+  serBread(data, GPS_MAX_BUF_SIZE, 1);
+
+  start = strchr(data, '$');
+  if(start == NULL)
+  {
+    return -2;
+  }
+
+  end = strchr(start, '*');
+  if(end == NULL)
+  {
+    return -3;
+  }
+  *(end+3) = 0;
+
+  if(memcmp( start, "$GPRMC", strlen("$GPRMC") ) == 0)
+  {	//Si la trama es del tipo RMC la leo, sino, la ignoro
+     strcpy(p_str, start);
+     return 1;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+/*** BeginHeader GPS_ask */
+void GPS_ask();
+/*** EndHeader */
+//Funcion para pedir una trama al GPS
+void GPS_ask()
+{
+	GPS_gets(bufferGPS);
+	printf("%s\n",bufferGPS);
+}
+
+/*** BeginHeader GPS_update */
+int GPS_update();
+/*** EndHeader */
+int GPS_update()
+{
+	int a;
+	a=gps_get_position(&posicionGPS, bufferGPS);
+	printf("\nResultado posicion: %d\n",a);
+	return a;
+}
+
+/*** BeginHeader GPS_format */
+void GPS_format(GPSPosition registro);
+/*** EndHeader */
+void GPS_format(GPSPosition registro)
+{
+	//Asigno nuevas cadenas y numeros temporales sobre los cuales guardar la informacion que se va procesando
+	float lon, lat;
+	int gradosLatitud, gradosLongitud;
+	char cadenaLongitud[10];
+	char cadenaLatitud[10];
+	char cadenaGradosLongitud[5];
+	char cadenaGradosLatitud[5];
+	//Fin asignacion
+
+	//Se pasan los minutos de longitud a horas
+	lon = (float)registro.lon_minutes / 60;
+	ftoa(lon, cadenaLongitud);
+
+	//Se pasan los minutos de latitud a horas
+	lat = (float)registro.lat_minutes / 60;
+	ftoa(lat, cadenaLatitud);
+
+	//Se asignan los grados como positivos o negativos dependiendo el cuadrante
+	gradosLatitud = registro.lat_degrees;
+	if (registro.lat_direction == 'S')
+	{
+		gradosLatitud = gradosLatitud * (-1);
+	}
+
+	gradosLongitud = registro.lon_degrees;
+	if (registro.lon_direction == 'W')
+	{
+		gradosLongitud = gradosLongitud * (-1);
+	}
+
+	//Se guardan como cadena los grados
+	itoa(gradosLatitud, cadenaGradosLatitud);
+	itoa(gradosLongitud, cadenaGradosLongitud);
+
+	memset(cadenaGPSFormateada, 0, sizeof(cadenaGPSFormateada));	//Se limpia la cadena para asegurar que no se encuentre basura
+
+	//Se concatenan las cadenas temporales en una cadena global para ser usadas posteriormente
+	strcat(cadenaGPSFormateada, cadenaGradosLatitud);
+	strcat(cadenaGPSFormateada, ".");
+	strcat(cadenaGPSFormateada, cadenaLatitud);
+	strcat(cadenaGPSFormateada, ",");
+	strcat(cadenaGPSFormateada, cadenaGradosLongitud);
+	strcat(cadenaGPSFormateada, ".");
+	strcat(cadenaGPSFormateada, cadenaLongitud);
+}
+
+/*** BeginHeader GPS_obtenerDatos */
+void GPS_obtenerDatos(void *data);
+/*** EndHeader */
+void GPS_obtenerDatos(void *data){
+	char algo[100];
+	int resultado;
+	while(1){
+		resultado = GPS_gets(algo);
+		//printf("%d: %s\n",resultado,algo);
+		OSTimeDlySec(1);
+	}
+}
+
+/*** BeginHeader GPS_main */
+void GPS_main(void *data);
+/*** EndHeader */
+void GPS_main(void * data){
+	char mensajeTexto[128];
+	while(1){
+    printf("Task debugg: GPS_main start\n");
+		while (GPS_update() < 0)		//Si la informacion es invalida no prosigo
+		{
+			GPS_ask();
+		}
+		memset(mensajeTexto, 0, sizeof(mensajeTexto));
+		strcat(mensajeTexto, "https://www.google.com/maps/place/"); //link mejorado que funciona directamente con nuestra estructura de lat,long
+		GPS_format(posicionGPS);
+		strcat(mensajeTexto, cadenaGPSFormateada);
+		printf("\n");
+		printf(mensajeTexto);
+		printf("\n");
+		OSTimeDlySec(1);
+	}
+}

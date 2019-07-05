@@ -1,5 +1,9 @@
 # Prerequisites
 *.d
+*.HX1
+*.MD1
+*.bak
+*.DBG
 
 # Object files
 *.o

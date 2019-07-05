@@ -1,0 +1,88 @@
+/*** BeginHeader */
+tcp_Socket echosock;
+/*** EndHeader */
+
+/*** BeginHeader ETHERNET_imprimir */
+void ETHERNET_imprimir(char *s);
+/*** EndHeader */
+//Funcion que en base al tipo pasado por parametro
+//escribe por consola o por hercules
+//En el caso de que sea un 1 ser? por Hercules
+void ETHERNET_imprimir(char *s){
+  sock_fastwrite(&echosock, s, strlen(s));
+}
+
+
+/*** BeginHeader ETHERNET_preguntar */
+void ETHERNET_preguntar(char *pregunta, char *respuesta);
+/*** EndHeader */
+
+//Funcion que imprime una pregunta y espera por la respuesta cargando el texto al puntero de char respuesta
+void ETHERNET_preguntar(char *pregunta, char *respuesta){
+	int bytes;
+
+	ETHERNET_imprimir(pregunta);
+	while (tcp_tick(&echosock))
+	{
+		bytes = sock_dataready(&echosock);
+		if (bytes > 0)
+		{
+			if (bytes > MAX_BUFSIZE)
+			{
+				bytes = MAX_BUFSIZE;
+			}
+			sock_fastread(&echosock, respuesta, bytes);
+			sock_flush(&echosock);
+			respuesta[bytes] = '\0';
+			return;
+		}
+		OSTimeDlyHMSM(0,0,0,100);
+	}
+}
+
+/*** BeginHeader ETHERNET_main */
+void ETHERNET_main(void *data);
+/*** EndHeader */
+void ETHERNET_main(void* data){
+	INT8U err;
+	char respuesta[255];
+
+	while(1){
+    printf("Task debugg: ETHERNET_main start\n");
+		while (!sock_established(&echosock))
+		{
+			OSTimeDlyHMSM(0,0,0,100);
+		}
+		memset(respuesta,0,sizeof(respuesta));
+		printf("Esperando\n");
+		ETHERNET_preguntar("Ingrese",respuesta);
+		printf("Calculando\n");
+		convertirCheckpoint(respuesta);
+		printf("Terminado\n");
+		OSTimeDlyHMSM(0,0,0,100);
+    //printf("Task debugg: ETHERNET_main end\n");
+	}
+}
+
+/*** BeginHeader ETHERNET_mantener */
+void ETHERNET_mantener(void *data);
+/*** EndHeader */
+//Funcion que mantiene el Ethernet prendido
+void ETHERNET_mantener(void *data){
+	while(1){
+    printf("Task debugg: ETHERNET_mantener start\n");
+		tcp_tick(NULL);
+		OSTimeDlyHMSM(0,0,0,10);
+    //printf("Task debugg: ETHERNET_mantener end\n");
+	}
+}
+
+/*** BeginHeader ETHERNET_iniciar */
+void ETHERNET_iniciar();
+/*** EndHeader */
+//Establecer la conexi?n
+void ETHERNET_iniciar(){
+	sock_init();
+	tcp_listen(&echosock, PORT, 0, 0, NULL, 0);
+	sock_mode(&echosock, TCP_MODE_ASCII);
+}
