@@ -2,10 +2,7 @@
 Pendientes:
 - Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
 lista de checkPoints definida por Ethernet, checkPoints marcados
-ultimaPresionadaBoton
-- GPS
-Todos los mensajes enviados deben incluir link de google maps con posicion actual de GPS
-- Valores reales ritmo cardiaco
+-Chequear mensajes enviados
 */
 
 #define TESTING 1
@@ -29,8 +26,8 @@ Todos los mensajes enviados deben incluir link de google maps con posicion actua
 #define DINBUFSIZE 511
 #define DOUTBUFSIZE 511
 
-#define MINIMO_RITMO_CARDIACO 1500
-#define MAXIMO_RITMO_CARDIACO 3500
+#define MINIMO_RITMO_CARDIACO 50.0
+#define MAXIMO_RITMO_CARDIACO 220.0
 #define MAX_TIMEOUT_KEEPALIVE 600		//10 minutos en segundos
 #define PIN_ANALOGICO_CARDIACO 0
 
@@ -45,7 +42,6 @@ typedef struct CheckPoints
 typedef struct Information
 {
 	CheckPoint* checkpoints;
-	unsigned long lastPressTime;
 	int checker;
 } Info;
 
@@ -76,17 +72,13 @@ unsigned long ultimaPresionadaBoton;
 // desde donde se pregunta (tipo)
 void chequearEstadoDeVida(void * data)
 {
-	int valorAnalogico;
+	float valorAnalogico;
 	while(1){
-		printf("Task debugg: chequearEstadoDeVida start\n");
-		valorAnalogico = IO_getAnalogInput(PIN_ANALOGICO_CARDIACO);
-		printf("Check cardiaco: %d\n",valorAnalogico);
+		valorAnalogico = ((float)IO_getAnalogInput(PIN_ANALOGICO_CARDIACO))*0.073;
 		if(valorAnalogico<MINIMO_RITMO_CARDIACO || valorAnalogico>MAXIMO_RITMO_CARDIACO){
-			printf("Agregando morido %d\n",valorAnalogico);
 			OSQPost(mailBoxMensajeMuerteModem,"sepuku");
-			OSTaskDel(OS_PRIO_SELF); //O usar un delay para dejar en espera la funcion por X cantidad de tiempo
+			OSTimeDlySec(60);
 		}
-		//printf("Task debugg: chequearEstadoDeVida end\n");
 		OSTimeDlySec(1);
 	}
 }
@@ -180,7 +172,6 @@ void miFuncion(void *data){
 	}
 
 	storedInfo.checkpoints = lcp;
-	storedInfo.lastPressTime = 0;
 	storedInfo.checker = 1;
 
 	writeUserBlock(1,&storedInfo,sizeof(storedInfo));
@@ -227,7 +218,6 @@ main(){
 	printf("Abrite consola\n");
 	/*
 		storedInfo.checkpoints = listaCheckPoints;
-		storedInfo.lastPressTime = 0;
 		storedInfo.checker = 1;
 		writeUserBlock(1,&storedInfo,sizeof(storedInfo));
 		r=readUserBlock(&storedInfo,1,sizeof(storedInfo));
