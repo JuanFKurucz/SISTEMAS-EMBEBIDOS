@@ -104,26 +104,6 @@ int MODEM_modoTexto(char* received){
 	return 0;
 }
 
-/*** BeginHeader MODEM_leerMensajes */
-int MODEM_leerMensajes(char* received);
-/*** EndHeader */
-//Funcion que lee los mensajes recibidos
-int MODEM_leerMensajes(char * received){
-	//printf("Leer mensajes");
-	MODEM_comunicarse("AT+CMGL=\"ALL\"");
-	memset(received, 0, sizeof(received));
-	IO_leerPuertoD(received);
-	//printf("%s", received);
-	OSTimeDlyHMSM(0,0,0,500);
-
-	if(UT_isEqual(received,"OK") == 1){
-		//MODEM_borrarMensajes(received);
-		return 1;
-	}
-	return 0;
-}
-
-
 /*** BeginHeader MODEM_enviarMensajes */
 int MODEM_enviarMensajes(char* received);
 /*** EndHeader */

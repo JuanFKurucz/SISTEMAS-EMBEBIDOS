@@ -1,12 +1,11 @@
 /*
-La funcion leerMensajes no se usa para el obligatorio ELIMINAR AL ENTREGAR
-
 Pendientes:
 - Memoria volatil: Almacenar informacion de checkpoints y datos fragiles del usuario
 lista de checkPoints definida por Ethernet, checkPoints marcados
 ultimaPresionadaBoton
 - GPS
 Todos los mensajes enviados deben incluir link de google maps con posicion actual de GPS
+- Valores reales ritmo cardiaco
 */
 
 #define TESTING 1
