@@ -12,6 +12,10 @@ void MODEM_init(){
 	mailBoxMensajeMuerteModem = OSQCreate(&mensajeMailBox,1);
 }
 
+/*
+	Funcion llamada por el sistema operativo que controla el menu del modem y todas las
+	acciones para realizar el envio de mensajes.
+*/
 /*** BeginHeader MODEM_main */
 void MODEM_main(void *data);
 /*** EndHeader */
@@ -97,8 +101,9 @@ void MODEM_main(void *data){
 	}
 }
 
-
-
+/*
+	Escribe un texto en el puerto D
+*/
 /*** BeginHeader MODEM_comunicarse */
 void MODEM_comunicarse(char * texto);
 /*** EndHeader */
@@ -109,10 +114,10 @@ void MODEM_comunicarse(char * texto){
 }
 
 
+//Funcion que habilita el modo texto para luego poder enviar mensajes
 /*** BeginHeader MODEM_modoTexto */
 int MODEM_modoTexto(char* received);
 /*** EndHeader */
-//Funcion que habilita el modo texto para luego poder enviar mensajes
 int MODEM_modoTexto(char* received){
 	MODEM_comunicarse("AT+CMGF=1");
 	memset(received, 0, sizeof(received));
@@ -123,10 +128,10 @@ int MODEM_modoTexto(char* received){
 	return 0;
 }
 
+//Funcion que envia Mensajes de texto
 /*** BeginHeader MODEM_enviarMensajes */
 int MODEM_enviarMensajes(char* received);
 /*** EndHeader */
-//Funcion que envia Mensajes de texto
 int MODEM_enviarMensajes(char* received){
 	char buffer[255];
 	char mensajeTexto[255];
@@ -161,11 +166,11 @@ int MODEM_enviarMensajes(char* received){
 }
 
 
+//Funcion que borra los mensajes del celular
+//Forma de liberar la bandeja de entrada
 /*** BeginHeader MODEM_borrarMensajes */
 int MODEM_borrarMensajes(char* received);
 /*** EndHeader */
-//Funcion que borra los mensajes del celular
-//Forma de liberar la bandeja de entrada
 int MODEM_borrarMensajes(char * received){
 	MODEM_comunicarse("AT+CMGDA=\"DEL ALL\"");
 	memset(received, 0, sizeof(received));
@@ -176,12 +181,11 @@ int MODEM_borrarMensajes(char * received){
 	return 0;
 }
 
-/*** BeginHeader MODEM_ponerPin */
-int MODEM_ponerPin(char* received);
-
-/*** EndHeader */
 //Funcion que ingresa el pin al chip
 //Nuestro pin es 5454
+/*** BeginHeader MODEM_ponerPin */
+int MODEM_ponerPin(char* received);
+/*** EndHeader */
 int MODEM_ponerPin(char* received){
 	MODEM_comunicarse("AT+CPIN?");
 	IO_leerPuertoD(received);
@@ -198,11 +202,11 @@ int MODEM_ponerPin(char* received){
 }
 
 
+//Funcion que registra el chip en la red
+//En nuestro caso el registro es para Antel
 /*** BeginHeader MODEM_registrarRed */
 int MODEM_registrarRed(char* received);
 /*** EndHeader */
-//Funcion que registra el chip en la red
-//En nuestro caso el registro es para Antel
 int MODEM_registrarRed(char* received){
 	MODEM_comunicarse("AT+CREG?");
 	memset(received, 0, sizeof(received));
@@ -220,10 +224,10 @@ int MODEM_registrarRed(char* received){
 }
 
 
+//Funcion que prende el Modem
 /*** BeginHeader MODEM_prender */
 void MODEM_prender();
 /*** EndHeader */
-//Funcion que prende el Modem
 void MODEM_prender(){
 	if (!BitRdPortI(PBDR, 7)){
 		BitWrPortI(PEDDR,&PEDDRShadow,0,4);

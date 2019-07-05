@@ -1,16 +1,3 @@
-
-/*** BeginHeader UT_delay */
-void UT_delay( long p_ms );
-/*** EndHeader */
-void UT_delay( long p_ms )
-{
-	long timer;
-
-	timer = MS_TIMER + p_ms;
-
-	while ((long)(MS_TIMER - timer) < 0);
-}
-
 /*** BeginHeader UT_ASCIItoCharNum */
 char UT_ASCIItoCharNum( char p_input );
 /*** EndHeader */
@@ -30,6 +17,12 @@ char UT_ASCIItoCharNum( char p_input )
 	}
 }
 
+/*
+	Funcion encargada de substraer una poricion de un string dado una posicion inicial y una final
+	Se recibe el buffer donde se escribira la poricion de string a cortar.
+	El buffer string se mantiene inmutable
+	El buffer resultado contendra la poricion cortada de string
+*/
 /*** BeginHeader UT_cortarString */
 void UT_cortarString(char * string, int inicio, int fin, char * resultado);
 /*** EndHeader */
@@ -46,6 +39,12 @@ void UT_cortarString(char * string, int inicio, int fin, char * resultado){
 	(*resultado) = '\0';
 }
 
+/*
+		Funcion encargada de comprobar la existencia de una ocurrencia de un string obtenido por parametro
+		contra otro string obtenido por parametro
+		Devuelve 1 si waiting existe dentro de received
+		Si no devuelve 0
+*/
 /*** BeginHeader UT_isEqual */
 int UT_isEqual(char* received, char* waiting);
 /*** EndHeader */

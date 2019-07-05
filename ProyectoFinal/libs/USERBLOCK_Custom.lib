@@ -1,3 +1,11 @@
+/*
+	Funcion que se encarga de generar una suma que compruebe el estado de los datos en la memoria.
+	Se usa la variable estado de cada checkpoint y la variable jugando de info.
+
+	Se entiende que estos datos son minimamente utiles para saber si la memoria no esta corrupta,
+	ya que en casos de prueba siempre se altero la variable estado a numeros mayores que 1000 y estado
+	solo puede ser 0 o 1.
+*/
 /*** BeginHeader USERBLOCK_generateCheckSum */
 int USERBLOCK_generateCheckSum();
 /*** EndHeader */
@@ -11,11 +19,18 @@ int USERBLOCK_generateCheckSum(){
 		result += (*lista).estado;
 		lista++;
 	}
+	result += storedInfo.jugando;
 	return result;
 }
 
+/*
+	Funcion que compara un checksum dado por parametro con el checksum actual de los datos
+	de la estructura global storedInfo.
+	Si son iguales quiere decir que los datos son coherentes entre si, entonces devuelve 1
+	Si no devuelve 0
+*/
 /*** BeginHeader USERBLOCK_verify */
-int USERBLOCK_verify();
+int USERBLOCK_verify(int sum);
 /*** EndHeader */
 int USERBLOCK_verify(int sum){
 	if(sum==USERBLOCK_generateCheckSum()){
@@ -24,6 +39,10 @@ int USERBLOCK_verify(int sum){
 	return 0;
 }
 
+/*
+	Funcion encargada de salvar la estructura actual storedInfo en la memoria y generar su
+	correspondiente checksum
+*/
 /*** BeginHeader USERBLOCK_save */
 int USERBLOCK_save();
 /*** EndHeader */
@@ -36,7 +55,6 @@ int USERBLOCK_save(){
 		storedInfo.checkpoints[i].estado = listaCheckPoints[i].estado;
 	}
 	storedInfo.checksum = USERBLOCK_generateCheckSum(listaCheckPoints);
-	storedInfo.jugando = 1;
 	if(writeUserBlock(USERBLOCK_NUMBER,&storedInfo,sizeof(storedInfo))!=0){
 		printf("Couldn't save\n");
 		return 0;

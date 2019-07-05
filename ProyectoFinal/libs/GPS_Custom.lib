@@ -114,6 +114,9 @@ int GPS_update()
 	return a;
 }
 
+/*
+  
+*/
 /*** BeginHeader GPS_cords */
 void GPS_cords(GPSPosition registro, float * coordenadas);
 /*** EndHeader */
@@ -160,6 +163,11 @@ void GPS_cords(GPSPosition registro, float * coordenadas)
 	strcat(cadenaGPSFormateada, cadenaLongitud);
   coordenadas[1]=atof(cadenaGPSFormateada);
 }
+
+/*
+  Funcion encarga de convertir la informacion de longitud y latitud del gps a un string
+  para poder ser enviado por texto
+*/
 /*** BeginHeader GPS_format */
 void GPS_format(GPSPosition registro);
 /*** EndHeader */
@@ -182,18 +190,10 @@ void GPS_format(GPSPosition registro)
   strcat(cadenaGPSFormateada, latitud);
 }
 
-/*** BeginHeader GPS_obtenerDatos */
-void GPS_obtenerDatos(void *data);
-/*** EndHeader */
-void GPS_obtenerDatos(void *data){
-	char algo[100];
-	int resultado;
-	while(1){
-		resultado = GPS_gets(algo);
-		OSTimeDlySec(1);
-	}
-}
-
+/*
+  Funcion main del sistema operativo que se encarga de estar actualizando la cadena de gps
+  cada 1 segundo.
+*/
 /*** BeginHeader GPS_main */
 void GPS_main(void *data);
 /*** EndHeader */

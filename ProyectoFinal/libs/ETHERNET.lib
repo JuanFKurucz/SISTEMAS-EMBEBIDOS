@@ -108,6 +108,7 @@ void ETHERNET_main(void* data){
   		ETHERNET_preguntar("Datos guardados correctamente, desea terminar? (s/n)\n",respuesta);
       if(UT_isEqual(respuesta,"s")){
         OSSemPend(SemaforoInfo, 0, &err);
+          storedInfo.jugando = 1;
           USERBLOCK_save();
       	OSSemPost(SemaforoInfo);
         iniciarJuego();

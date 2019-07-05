@@ -91,7 +91,10 @@ void chequearEstadoDeVida(void * data)
 	}
 }
 
-
+/*
+	Funcion que compara la posicion actual del jugador con la posicion de un checkpoint,
+	se pasa la id del checkpoint
+*/
 int checkPosicion(int id_checkpoint){
 	float coordenadas[2];
 	Info * inf;
@@ -164,6 +167,11 @@ void keepAlive(void * data){
 	}
 }
 
+/*
+	Funcion que es llamada una vez dado los estados suficientes para iniciar el juego
+	Informacion de checkpoints cargada correctamente desde memoria o insercion y validacion
+	de checkpoints por ethernet
+*/
 iniciarJuego(){
 	OSTaskCreate(GPS_main, NULL, 512, 7);
 	OSTaskCreate(keepAlive,NULL, 512, 6);
@@ -194,22 +202,20 @@ init(){
 		}
 	}
 	#if TESTING
-		memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
-		posicionPrueba=0;
-		coordenadasPrueba[0].latitud = 11.0;
-		coordenadasPrueba[0].longitud = 11.0;
+	memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
+	posicionPrueba=0;
+	coordenadasPrueba[0].latitud = 11.0;
+	coordenadasPrueba[0].longitud = 11.0;
 
-		coordenadasPrueba[1].latitud = 20.0;
-		coordenadasPrueba[1].longitud = 20.0;
+	coordenadasPrueba[1].latitud = 20.0;
+	coordenadasPrueba[1].longitud = 20.0;
 
-		coordenadasPrueba[2].latitud = 15.0;
-		coordenadasPrueba[2].longitud = 15.0;
+	coordenadasPrueba[2].latitud = 15.0;
+	coordenadasPrueba[2].longitud = 15.0;
 	#endif
 }
 
 main(){
-	int i;
-	CheckPoint cp;
 	printf("Start\n");
 	init();
 	OSTaskCreate(GPS_init, NULL, 512, 5);
