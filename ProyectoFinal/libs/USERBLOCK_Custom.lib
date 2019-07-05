@@ -20,7 +20,7 @@ int USERBLOCK_generateCheckSum(){
 int USERBLOCK_verify();
 /*** EndHeader */
 int USERBLOCK_verify(int sum){
-	if(sum-USERBLOCK_generateCheckSum()==0){
+	if(sum==USERBLOCK_generateCheckSum()){
 		return 1;
 	}
 	return 0;
