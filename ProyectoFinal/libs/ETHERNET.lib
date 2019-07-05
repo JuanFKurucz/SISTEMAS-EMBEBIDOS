@@ -91,7 +91,6 @@ void ETHERNET_main(void* data){
   int err;
 
 	while(1){
-    printf("Task debugg: ETHERNET_main start\n");
 		while (!sock_established(&echosock))
 		{
 			OSTimeDlyHMSM(0,0,0,100);
@@ -123,10 +122,8 @@ void ETHERNET_mantener(void *data);
 //Funcion que mantiene el Ethernet prendido
 void ETHERNET_mantener(void *data){
 	while(1){
-    printf("Task debugg: ETHERNET_mantener start\n");
 		tcp_tick(NULL);
-		OSTimeDlyHMSM(0,0,0,10);
-    //printf("Task debugg: ETHERNET_mantener end\n");
+    OSTimeDlyHMSM(0,0,0,10);
 	}
 }
 

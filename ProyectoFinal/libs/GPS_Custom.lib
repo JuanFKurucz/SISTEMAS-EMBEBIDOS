@@ -25,7 +25,6 @@ void GPS_init( void );
 
 void GPS_init( void )
 {
-  printf("Task debugg: GPS_init start\n");
   BitWrPortI( PDDDR, &PDDDRShadow, 0, 5 ); //Bit 5 como entrada (ARXB)
   BitWrPortI( PDFR, &PDFRShadow, 1, 4 );	 //Bit 4 con funcion alternativa (ATXB)
   serBdatabits( PARAM_8BIT );		           //8 bits de datos
@@ -49,7 +48,6 @@ void GPS_init( void )
 	OSTimeDlyHMSM(0,0,0,100);
 	serBputs("$PSRF103,08,00,00,01*2C\r\n");	//ZDA - off
 
-  printf("Task debugg: GPS_init end\n");
   OSTaskDel(OS_PRIO_SELF);
 }
 
@@ -104,7 +102,6 @@ void GPS_ask();
 void GPS_ask()
 {
 	GPS_gets(bufferGPS);
-	printf("%s\n",bufferGPS);
 }
 
 /*** BeginHeader GPS_update */
@@ -114,7 +111,6 @@ int GPS_update()
 {
 	int a;
 	a=gps_get_position(&posicionGPS, bufferGPS);
-	printf("\nResultado posicion: %d\n",a);
 	return a;
 }
 
@@ -194,7 +190,6 @@ void GPS_obtenerDatos(void *data){
 	int resultado;
 	while(1){
 		resultado = GPS_gets(algo);
-		//printf("%d: %s\n",resultado,algo);
 		OSTimeDlySec(1);
 	}
 }
@@ -203,20 +198,11 @@ void GPS_obtenerDatos(void *data){
 void GPS_main(void *data);
 /*** EndHeader */
 void GPS_main(void * data){
-	char mensajeTexto[128];
 	while(1){
-    printf("Task debugg: GPS_main start\n");
 		while (GPS_update() < 0)		//Si la informacion es invalida no prosigo
 		{
 			GPS_ask();
 		}
-		memset(mensajeTexto, 0, sizeof(mensajeTexto));
-		strcat(mensajeTexto, "https://www.google.com/maps/place/"); //link mejorado que funciona directamente con nuestra estructura de lat,long
-		GPS_format(posicionGPS);
-		strcat(mensajeTexto, cadenaGPSFormateada);
-		printf("\n");
-		printf(mensajeTexto);
-		printf("\n");
 		OSTimeDlySec(1);
 	}
 }

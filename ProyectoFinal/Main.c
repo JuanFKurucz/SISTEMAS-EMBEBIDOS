@@ -96,13 +96,10 @@ int checkPosicion(int id_checkpoint){
 	#else
 		GPS_cords(posicionGPS,coordenadas);
 	#endif
-	printf("%f == %f \n",coordenadas[0],listaCheckPoints[id_checkpoint].latitud);
-	printf("%f == %f \n",coordenadas[1],listaCheckPoints[id_checkpoint].longitud);
 	if(fabs(listaCheckPoints[id_checkpoint].latitud - coordenadas[0]) <= TOLERANCIA_LATITUD &&
 		fabs(listaCheckPoints[id_checkpoint].longitud - coordenadas[1]) <= TOLERANCIA_LONGITUD){
 		return 1;
 	}
-	printf("Nope\n");
 	return 0;
 }
 
@@ -117,7 +114,6 @@ void interaccionBotonCheckPoint(int id_checkpoint){
 void botonera(void * data){
 	int i;
 	while(1){
-		printf("Task debugg: botonera start\n");
 		for(i=0;i<=5;i++){
 			interaccionBotonCheckPoint(i);
 		}
@@ -130,7 +126,6 @@ void botonera(void * data){
 			LED_RESET(7);
 		}
 		OSTimeDlyHMSM(0,0,0,50);
-		//printf("Task debugg: botonera end\n");
 	}
 }
 
@@ -141,18 +136,13 @@ void keepAlive(void * data){
 	unsigned long timeNow;
 	ultimaPresionadaBoton=read_rtc();
 	while(1){
-		printf("Task debugg: keepAlive start\n");
 		timeNow = read_rtc();
-		printf("\nKeepAlive check (%lu-%lu)\n",timeNow,ultimaPresionadaBoton);
 		if(timeNow-ultimaPresionadaBoton >= MAX_TIMEOUT_KEEPALIVE){
 			//Murio
-			printf("\nKeepAlive timeout\n");
 			OSQPost(mailBoxMensajeMuerteModem,"keepAlive");
 			LED_SET(7);
 		}
-		//OSTimeDlyHMSM(0,10,0,0);
 		OSTimeDlySec(MAX_TIMEOUT_KEEPALIVE);
-		//printf("Task debugg: keepAlive end\n");
 	}
 }
 
@@ -215,7 +205,6 @@ init(){
 }
 main(){
 	init();
-	printf("Abrite consola\n");
 	/*
 		storedInfo.checkpoints = listaCheckPoints;
 		storedInfo.checker = 1;

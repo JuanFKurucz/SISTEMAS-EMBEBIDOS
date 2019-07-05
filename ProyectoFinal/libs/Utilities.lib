@@ -51,7 +51,6 @@ int UT_isEqual(char* received, char* waiting);
 /*** EndHeader */
 //Funcion que compara dos string
 int UT_isEqual(char* received, char* waiting){
-	//printf("\nComparacion:\n%s==%s\n",received,waiting);
 	if(strstr(received, waiting) != NULL){
 		return 1;
 	} else {
