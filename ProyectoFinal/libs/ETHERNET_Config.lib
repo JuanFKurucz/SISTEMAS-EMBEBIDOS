@@ -6,4 +6,5 @@
 #define MY_GATEWAY "10.10.6.2"
 #define MAX_BUFSIZE 1024
 #define PORT 7
+#define OS_PRIORIDAD_ETHERNET_MANTENER 11
 /*** EndHeader */

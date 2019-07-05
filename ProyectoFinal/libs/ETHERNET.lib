@@ -48,9 +48,9 @@ i=2	12,17		5*3+2
 i=3 18,23		5*4+3
 */
 /*** BeginHeader ETHERNET_convertirCheckPoints */
-void ETHERNET_convertirCheckPoints(char * respuesta);
+int ETHERNET_convertirCheckPoints(char * respuesta);
 /*** EndHeader */
-void ETHERNET_convertirCheckPoints(char * respuesta){
+int ETHERNET_convertirCheckPoints(char * respuesta){
 	int i;
 	char miCorte[6];
 	float datos[12];
@@ -60,21 +60,28 @@ void ETHERNET_convertirCheckPoints(char * respuesta){
 	for(i=0;i<12;i++){
 		memset(miCorte, 0, sizeof(miCorte));
 		UT_cortarString(respuesta,6*i,5*(i+1)+i,miCorte);
+    if(strlen(miCorte)==0){
+      return 1;
+    }
 		datos[i] = atof(miCorte);
+    if(_xtoxErr == 1){
+      return 1;
+    }
 	}
 	memset(listaCheckPoints, 0, sizeof(listaCheckPoints));
 	for(i=0;i<6;i++){
 		listaCheckPoints[i].latitud=datos[i*2];
 		listaCheckPoints[i].longitud=datos[i*2+1];
 	}
+  return 0;
 }
 
 /*** BeginHeader ETHERNET_main */
 void ETHERNET_main(void *data);
 /*** EndHeader */
 void ETHERNET_main(void* data){
-	INT8U err;
 	char respuesta[MAX_BUFSIZE];
+  int err;
 
 	while(1){
     printf("Task debugg: ETHERNET_main start\n");
@@ -83,13 +90,23 @@ void ETHERNET_main(void* data){
 			OSTimeDlyHMSM(0,0,0,100);
 		}
 		memset(respuesta,0,sizeof(respuesta));
-		printf("Esperando\n");
-		ETHERNET_preguntar("Ingrese\n",respuesta);
-		printf("Calculando\n");
-		ETHERNET_convertirCheckPoints(respuesta);
-		printf("Terminado\n");
+		ETHERNET_preguntar("Ingrese los datos (lat;lon/lat;long/lat;long/lat;long/lat;long/lat;long)\n",respuesta);
+  	ETHERNET_imprimir("Calculando\n");
+		err=ETHERNET_convertirCheckPoints(respuesta);
+    if(err == 0){
+      memset(respuesta,0,sizeof(respuesta));
+  		ETHERNET_preguntar("Datos guardados correctamente, desea terminar? (s/n)\n",respuesta);
+      if(UT_isEqual(respuesta,"s")){
+        ETHERNET_imprimir("Jugador listo, hasta luego\n");
+        OSTimeDlyHMSM(0,0,0,500);
+        tcp_abort(&echosock);
+        OSTaskDel(OS_PRIORIDAD_ETHERNET_MANTENER);
+        OSTaskDel(OS_PRIO_SELF);
+      }
+    } else {
+      ETHERNET_imprimir("Datos erroneos, intente nuevamente\n");
+    }
 		OSTimeDlyHMSM(0,0,0,100);
-    //printf("Task debugg: ETHERNET_main end\n");
 	}
 }
 

@@ -184,6 +184,7 @@ init(){
 	OSInit();
 	ETHERNET_iniciar();
 	MODEM_init();
+	memset(listaCheckPoints,0,sizeof(listaCheckPoints));
 }
 main(){
 	init();
@@ -204,7 +205,7 @@ main(){
 	OSTaskCreate(chequearEstadoDeVida,NULL,512,8);
 	OSTaskCreate(MODEM_main,NULL,1024,9);
 	OSTaskCreate(ETHERNET_main, NULL, 2048, 10);
-	OSTaskCreate(ETHERNET_mantener, NULL, 512, 11);
+	OSTaskCreate(ETHERNET_mantener, NULL, 512, OS_PRIORIDAD_ETHERNET_MANTENER);
 	OSTaskCreate(botonera, NULL, 256, 12);
 
 	OSStart();
