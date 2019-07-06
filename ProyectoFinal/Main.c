@@ -80,10 +80,8 @@ void chequearEstadoDeVida(void * data)
 {
 	float valorAnalogico;
 	while(1){
-		printf("estado de vida\n");
 		valorAnalogico = ((float)IO_getAnalogInput(PIN_ANALOGICO_CARDIACO))*0.073;
 		if(valorAnalogico<MINIMO_RITMO_CARDIACO || valorAnalogico>MAXIMO_RITMO_CARDIACO){
-			printf("mensaje estado de vida\n");
 			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"sepuku");
 			OSSemPost(SemaforoMensaje);
@@ -133,12 +131,10 @@ void interaccionBotonCheckPoint(int id_checkpoint){
 void botonera(void * data){
 	int i;
 	while(1){
-		printf("botonera\n");
 		for(i=0;i<=5;i++){
 			interaccionBotonCheckPoint(i);
 		}
 		if(BTN_GET(6)==0){
-			printf("Enviar mensaje boton\n");
 			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"help");
 			OSSemPost(SemaforoMensaje);
@@ -152,19 +148,19 @@ void botonera(void * data){
 	}
 }
 
-
+/*
+	Funcion que comprueba la accion del boton 6 cada X tiempo
+*/
 void keepAlive(void * data){
-	// Chequer de que toco el boton cada 10 min
+	// Chequer de que toco el boton cada X tiempo
 	// Programar parpadeo de led cuando se aproxima el tiempo al timeout
 	unsigned long timeNow;
 	ultimaPresionadaBoton=read_rtc();
 	while(1){
 		OSTimeDlySec(MAX_TIMEOUT_KEEPALIVE);
-		printf("keepalive\n");
 		timeNow = read_rtc();
 		if(timeNow-ultimaPresionadaBoton >= MAX_TIMEOUT_KEEPALIVE){
 			//Murio
-			printf("Enviar mensaje keepALive\n");
 			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"keepAlive");
 			OSSemPost(SemaforoMensaje);
@@ -184,6 +180,13 @@ iniciarJuego(){
 	OSTaskCreate(botonera, NULL, 512, 11);
 }
 
+/*
+	Se inicializan todas las funciones y valores.
+	Se cargan los datos de memoria
+	Se crean los semaforos
+	Se limpia la memoria
+	Se inicializa el testing si es necesario
+*/
 init(){
 	int i;
 	HW_init();

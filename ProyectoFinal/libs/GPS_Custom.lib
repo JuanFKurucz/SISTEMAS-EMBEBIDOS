@@ -115,7 +115,9 @@ int GPS_update()
 }
 
 /*
-
+  Funcion encargada de convertir la GPSPosition a valores float en un array
+  A su vez deja concatenado en un string global estos floats para poder usarse mas directo
+  en los mensajes de texto
 */
 /*** BeginHeader GPS_cords */
 void GPS_cords(GPSPosition registro, float * coordenadas);
