@@ -52,6 +52,7 @@ CheckPoint coordenadasPrueba[3];
 int posicionPrueba;
 #endif
 
+int iniciado;
 Info storedInfo;
 CheckPoint listaCheckPoints[CANTIDAD_CHECKPOINTS];
 
@@ -81,6 +82,7 @@ void chequearEstadoDeVida(void * data)
 	float valorAnalogico;
 	while(1){
 		valorAnalogico = ((float)IO_getAnalogInput(PIN_ANALOGICO_CARDIACO))*0.073;
+		printf("%f\n",valorAnalogico);
 		if(valorAnalogico<MINIMO_RITMO_CARDIACO || valorAnalogico>MAXIMO_RITMO_CARDIACO){
 			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"sepuku");
@@ -175,9 +177,20 @@ void keepAlive(void * data){
 	de checkpoints por ethernet
 */
 iniciarJuego(){
-	OSTaskCreate(keepAlive,NULL, 512, 6);
-	OSTaskCreate(chequearEstadoDeVida,NULL,512,8);
-	OSTaskCreate(botonera, NULL, 512, 11);
+	int i;
+	if(iniciado==0){
+		iniciado=1;
+		OSTaskCreate(keepAlive,NULL, 512, 6);
+		OSTaskCreate(chequearEstadoDeVida,NULL,512,8);
+		OSTaskCreate(botonera, NULL, 512, 11);
+	}
+	for(i=0;i<6;i++){
+		if(listaCheckPoints[i].estado == 1){
+			LED_SET(i);
+		} else {
+			LED_RESET(i);
+		}
+	}
 }
 
 /*
@@ -188,7 +201,6 @@ iniciarJuego(){
 	Se inicializa el testing si es necesario
 */
 init(){
-	int i;
 	HW_init();
 	OSInit();
 	ETHERNET_iniciar();
@@ -199,11 +211,6 @@ init(){
 	readUserBlock(&storedInfo,USERBLOCK_NUMBER,sizeof(storedInfo));
 	if(USERBLOCK_verify(storedInfo.checksum) == 1){
 		memcpy(listaCheckPoints,storedInfo.checkpoints,sizeof(storedInfo.checkpoints));
-		for(i=0;i<6;i++){
-			if(listaCheckPoints[i].estado == 1){
-				LED_SET(i);
-			}
-		}
 		storedInfo.jugando=1;
 		iniciarJuego();
 	}
@@ -223,10 +230,11 @@ init(){
 
 main(){
 	printf("Start\n");
+	iniciado=0;
 	init();
-	OSTaskCreate(GPS_main, NULL, 512, 7);
-	OSTaskCreate(MODEM_main,NULL,1024,1);
 	OSTaskCreate(GPS_init, NULL, 512, 5);
+	OSTaskCreate(MODEM_main,NULL,1024,1);
+	OSTaskCreate(GPS_main, NULL, 512, 7);
 	OSTaskCreate(ETHERNET_main, NULL, 4096, 10);
 	OSTaskCreate(ETHERNET_mantener, NULL, 512, OS_PRIORIDAD_ETHERNET_MANTENER);
 	OSStart();
