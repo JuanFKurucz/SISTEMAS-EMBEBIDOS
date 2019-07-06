@@ -19,7 +19,6 @@ int USERBLOCK_generateCheckSum(){
 		result += (*lista).estado;
 		lista++;
 	}
-	result += storedInfo.jugando;
 	return result;
 }
 

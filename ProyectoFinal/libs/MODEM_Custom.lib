@@ -13,8 +13,8 @@ void MODEM_init(){
 }
 
 /*
-	Funcion llamada por el sistema operativo que controla el menu del modem y todas las
-	acciones para realizar el envio de mensajes.
+Funcion llamada por el sistema operativo que controla el menu del modem y todas las
+acciones para realizar el envio de mensajes.
 */
 /*** BeginHeader MODEM_main */
 void MODEM_main(void *data);
@@ -46,63 +46,66 @@ void MODEM_main(void *data){
 		OSTimeDlyHMSM(0,0,5,0);
 		MODEM_comunicarse("AT");
 		OSTimeDlyHMSM(0,0,0,100);
-		while( !serDrdUsed() )
-		{
-			OSTimeDlyHMSM(0,0,0,100);
-		}
-		timeout = 100;
-		OSSemPend(SemaforoMensaje, 0, &err);
-		punteroMensaje = OSQPend(mailBoxMensajeMuerteModem, timeout,&err);
-		OSSemPost(SemaforoMensaje);
+
 		IO_leerPuertoD(received);
-		if(punteroMensaje  == (void *)0){
-			printf("No hay mensaje\n");
-		} else {
-			printf("Mensaje nuevo\n");
-			if (MODEM_ponerPin(received) == 1){
-				printf("Pin puesto\n");
-				OSTimeDlyHMSM(0,0,0,100);
-				if(MODEM_registrarRed(received)==1){
-					printf("Red registrada\n");
+		printf("WHY %s\n",received);
+		if(UT_isEqual(received,"OK") == 1){
+			printf("Ready\n");
+			timeout = 100;
+			OSSemPend(SemaforoMensaje, 0, &err);
+			punteroMensaje = OSQPend(mailBoxMensajeMuerteModem, timeout,&err);
+			OSSemPost(SemaforoMensaje);
+			if(punteroMensaje  == (void *)0){
+				printf("No hay mensaje\n");
+			} else {
+				printf("Mensaje nuevo\n");
+				if (MODEM_ponerPin(received) == 1){
+					printf("Pin puesto\n");
 					OSTimeDlyHMSM(0,0,0,100);
-					if(MODEM_modoTexto(received)==1){
-						printf("Modo texto puesto\n");
+					if(MODEM_registrarRed(received)==1){
+						printf("Red registrada\n");
 						OSTimeDlyHMSM(0,0,0,100);
-						if(MODEM_borrarMensajes(received)==1){
-							printf("Mensajes borrados\n");
+						if(MODEM_modoTexto(received)==1){
+							printf("Modo texto puesto\n");
 							OSTimeDlyHMSM(0,0,0,100);
-							MODEM_enviarMensajes(received);
-							printf("Enviado final\n");
+							if(MODEM_borrarMensajes(received)==1){
+								printf("Mensajes borrados\n");
+								OSTimeDlyHMSM(0,0,0,100);
+								MODEM_enviarMensajes(received);
+								printf("Enviado final\n");
+							} else {
+								printf("Error al borrar mensajes\n");
+								OSSemPend(SemaforoMensaje, 0, &err);
+								OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
+								OSSemPost(SemaforoMensaje);
+							}
 						} else {
-							printf("Error al borrar mensajes\n");
+							printf("Error al poner modo texto\n");
 							OSSemPend(SemaforoMensaje, 0, &err);
 							OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
 							OSSemPost(SemaforoMensaje);
 						}
 					} else {
-						printf("Error al poner modo texto\n");
+						printf("Error al registrar en la red\n");
 						OSSemPend(SemaforoMensaje, 0, &err);
 						OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
 						OSSemPost(SemaforoMensaje);
 					}
 				} else {
-					printf("Error al registrar en la red\n");
+					printf("Error al poner el pin\n");
 					OSSemPend(SemaforoMensaje, 0, &err);
 					OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
 					OSSemPost(SemaforoMensaje);
 				}
-			} else {
-				printf("Error al poner el pin\n");
-				OSSemPend(SemaforoMensaje, 0, &err);
-				OSQPost(mailBoxMensajeMuerteModem,punteroMensaje);
-				OSSemPost(SemaforoMensaje);
 			}
+		} else {
+			printf("Not ready\n");
 		}
 	}
 }
 
 /*
-	Escribe un texto en el puerto D
+Escribe un texto en el puerto D
 */
 /*** BeginHeader MODEM_comunicarse */
 void MODEM_comunicarse(char * texto);
@@ -137,7 +140,7 @@ int MODEM_enviarMensajes(char* received){
 	char mensajeTexto[255];
 	if(MODEM_modoTexto(received) == 1){
 		memset(received, 0, sizeof(received));
-		serDputs("AT+CMGS=\"091829233\"\r");
+		serDputs("AT+CMGS=\"091328177\"\r");
 		while(!serDrdUsed());
 		memset(received, 0, sizeof(received));
 		IO_leerPuertoD(received);
@@ -150,7 +153,7 @@ int MODEM_enviarMensajes(char* received){
 		memset(mensajeTexto, 0, sizeof(mensajeTexto));
 		strcat(mensajeTexto, "Un jugador necesita asistencia en https://www.google.com/maps/place/"); //link mejorado que funciona directamente con nuestra estructura de lat,long
 		GPS_format(posicionGPS);
-		strcat(mensajeTexto, cadenaGPSFormateada);
+		strcat(mensajeTexto, stringGPSCords);
 		printf("%s\n",mensajeTexto);
 		serDputs(mensajeTexto);
 		serDputc(0x1A);
@@ -190,7 +193,7 @@ int MODEM_ponerPin(char* received){
 	MODEM_comunicarse("AT+CPIN?");
 	IO_leerPuertoD(received);
 	if(UT_isEqual(received,"SIM PIN") == 1){
-		MODEM_comunicarse("AT+CPIN=5454");
+		MODEM_comunicarse("AT+CPIN=9006");
 		IO_leerPuertoD(received);
 		if(UT_isEqual(received,"OK") == 1){
 			return 1;

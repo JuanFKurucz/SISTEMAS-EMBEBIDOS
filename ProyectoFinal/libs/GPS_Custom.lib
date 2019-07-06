@@ -14,7 +14,7 @@ int ActualizacionPosicion();
 
 GPSPosition gpsPosition;
 char bufferGPS[256];									// String donde se guarda la cadena que envia el GPS
-char cadenaGPSFormateada[50];
+char stringGPSCords[50];
 GPSPosition posicionGPS;							// Variable que se utiliza para almacenar provisoriamente la posicion en formato GPS
 
 /*** EndHeader */
@@ -115,7 +115,7 @@ int GPS_update()
 }
 
 /*
-  
+
 */
 /*** BeginHeader GPS_cords */
 void GPS_cords(GPSPosition registro, float * coordenadas);
@@ -152,16 +152,26 @@ void GPS_cords(GPSPosition registro, float * coordenadas)
 	itoa(gradosLatitud, cadenaGradosLatitud);
 	itoa(gradosLongitud, cadenaGradosLongitud);
 
-  memset(cadenaGPSFormateada, 0, sizeof(cadenaGPSFormateada));	//Se limpia la cadena para asegurar que no se encuentre basura
-  strcat(cadenaGPSFormateada, cadenaGradosLatitud);
-	strcat(cadenaGPSFormateada, ".");
-	strcat(cadenaGPSFormateada, cadenaLatitud);
-  coordenadas[0]=atof(cadenaGPSFormateada);
-  memset(cadenaGPSFormateada, 0, sizeof(cadenaGPSFormateada));	//Se limpia la cadena para asegurar que no se encuentre basura
-	strcat(cadenaGPSFormateada, cadenaGradosLongitud);
-	strcat(cadenaGPSFormateada, ".");
-	strcat(cadenaGPSFormateada, cadenaLongitud);
-  coordenadas[1]=atof(cadenaGPSFormateada);
+  memset(stringGPSCords, 0, sizeof(stringGPSCords));	//Se limpia la cadena para asegurar que no se encuentre basura
+  strcat(stringGPSCords, cadenaGradosLatitud);
+	strcat(stringGPSCords, ".");
+	strcat(stringGPSCords, cadenaLatitud);
+  coordenadas[0]=atof(stringGPSCords);
+  memset(stringGPSCords, 0, sizeof(stringGPSCords));	//Se limpia la cadena para asegurar que no se encuentre basura
+	strcat(stringGPSCords, cadenaGradosLongitud);
+	strcat(stringGPSCords, ".");
+	strcat(stringGPSCords, cadenaLongitud);
+  coordenadas[1]=atof(stringGPSCords);
+
+  //deja la cadena concatenada para uso global
+  memset(stringGPSCords, 0, sizeof(stringGPSCords));	//Se limpia la cadena para asegurar que no se encuentre basura
+  strcat(stringGPSCords, cadenaGradosLatitud);
+	strcat(stringGPSCords, ".");
+	strcat(stringGPSCords, cadenaLatitud);
+  strcat(stringGPSCords, ",");
+	strcat(stringGPSCords, cadenaGradosLongitud);
+	strcat(stringGPSCords, ".");
+	strcat(stringGPSCords, cadenaLongitud);
 }
 
 /*
@@ -179,15 +189,6 @@ void GPS_format(GPSPosition registro)
 	memset(coordenadas, 0, sizeof(coordenadas));
 
   GPS_cords(registro,coordenadas);
-  memset(longitud, 0, sizeof(longitud));
-  memset(latitud, 0, sizeof(latitud));
-  sprintf(longitud,"%f",coordenadas[0]);
-  sprintf(latitud,"%f",coordenadas[1]);
-
-  memset(cadenaGPSFormateada, 0, sizeof(coordenadas));
-  strcat(cadenaGPSFormateada, longitud);
-  strcat(cadenaGPSFormateada, ",");
-  strcat(cadenaGPSFormateada, latitud);
 }
 
 /*

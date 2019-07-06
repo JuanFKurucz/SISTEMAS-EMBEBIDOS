@@ -3,7 +3,7 @@ Pendientes:
 -Chequear mensajes enviados
 */
 
-#define TESTING 1
+#define TESTING 0
 #define CANTIDAD_CHECKPOINTS 6
 #define TOLERANCIA_LATITUD 1.0
 #define TOLERANCIA_LONGITUD 1.0
@@ -80,8 +80,10 @@ void chequearEstadoDeVida(void * data)
 {
 	float valorAnalogico;
 	while(1){
+		printf("estado de vida\n");
 		valorAnalogico = ((float)IO_getAnalogInput(PIN_ANALOGICO_CARDIACO))*0.073;
 		if(valorAnalogico<MINIMO_RITMO_CARDIACO || valorAnalogico>MAXIMO_RITMO_CARDIACO){
+			printf("mensaje estado de vida\n");
 			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"sepuku");
 			OSSemPost(SemaforoMensaje);
@@ -131,10 +133,12 @@ void interaccionBotonCheckPoint(int id_checkpoint){
 void botonera(void * data){
 	int i;
 	while(1){
+		printf("botonera\n");
 		for(i=0;i<=5;i++){
 			interaccionBotonCheckPoint(i);
 		}
 		if(BTN_GET(6)==0){
+			printf("Enviar mensaje boton\n");
 			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"help");
 			OSSemPost(SemaforoMensaje);
@@ -155,9 +159,11 @@ void keepAlive(void * data){
 	unsigned long timeNow;
 	ultimaPresionadaBoton=read_rtc();
 	while(1){
+		printf("keepalive\n");
 		timeNow = read_rtc();
 		if(timeNow-ultimaPresionadaBoton >= MAX_TIMEOUT_KEEPALIVE){
 			//Murio
+			printf("Enviar mensaje keepALive\n");
 			OSSemPend(SemaforoMensaje, 0, &err);
 			OSQPost(mailBoxMensajeMuerteModem,"keepAlive");
 			OSSemPost(SemaforoMensaje);
@@ -173,11 +179,9 @@ void keepAlive(void * data){
 	de checkpoints por ethernet
 */
 iniciarJuego(){
-	OSTaskCreate(GPS_main, NULL, 512, 7);
 	OSTaskCreate(keepAlive,NULL, 512, 6);
 	OSTaskCreate(chequearEstadoDeVida,NULL,512,8);
 	OSTaskCreate(botonera, NULL, 512, 11);
-	OSTaskCreate(MODEM_main,NULL,1024,9);
 }
 
 init(){
@@ -197,9 +201,8 @@ init(){
 				LED_SET(i);
 			}
 		}
-		if(storedInfo.jugando==1){
-			iniciarJuego();
-		}
+		storedInfo.jugando=1;
+		iniciarJuego();
 	}
 	#if TESTING
 	memset(coordenadasPrueba,0,sizeof(coordenadasPrueba));
@@ -218,6 +221,8 @@ init(){
 main(){
 	printf("Start\n");
 	init();
+	OSTaskCreate(GPS_main, NULL, 512, 7);
+	OSTaskCreate(MODEM_main,NULL,1024,1);
 	OSTaskCreate(GPS_init, NULL, 512, 5);
 	OSTaskCreate(ETHERNET_main, NULL, 4096, 10);
 	OSTaskCreate(ETHERNET_mantener, NULL, 512, OS_PRIORIDAD_ETHERNET_MANTENER);
