@@ -1,9 +1,5 @@
-/*
-Pendientes:
--Chequear mensajes enviados
-*/
-
 #define TESTING 0
+
 #define CANTIDAD_CHECKPOINTS 6
 #define TOLERANCIA_LATITUD 1.0
 #define TOLERANCIA_LONGITUD 1.0
@@ -11,7 +7,7 @@ Pendientes:
 #define PRESICION_LONGITUD 2
 #define MINIMO_RITMO_CARDIACO 50.0
 #define MAXIMO_RITMO_CARDIACO 220.0
-#define MAX_TIMEOUT_KEEPALIVE 600		//10 minutos en segundos
+#define MAX_TIMEOUT_KEEPALIVE 10		//600 == 10 minutos en segundos
 #define PIN_ANALOGICO_CARDIACO 0
 #define CELLPHONE "091328177"
 #define CODIGO_PIN "9006"
