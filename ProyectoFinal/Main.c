@@ -159,6 +159,7 @@ void keepAlive(void * data){
 	unsigned long timeNow;
 	ultimaPresionadaBoton=read_rtc();
 	while(1){
+		OSTimeDlySec(MAX_TIMEOUT_KEEPALIVE);
 		printf("keepalive\n");
 		timeNow = read_rtc();
 		if(timeNow-ultimaPresionadaBoton >= MAX_TIMEOUT_KEEPALIVE){
@@ -169,7 +170,6 @@ void keepAlive(void * data){
 			OSSemPost(SemaforoMensaje);
 			LED_SET(7);
 		}
-		OSTimeDlySec(MAX_TIMEOUT_KEEPALIVE);
 	}
 }
 
