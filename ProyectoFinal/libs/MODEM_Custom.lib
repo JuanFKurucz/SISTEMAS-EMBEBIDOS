@@ -48,7 +48,6 @@ void MODEM_main(void *data){
 		OSTimeDlyHMSM(0,0,0,100);
 
 		IO_leerPuertoD(received);
-		printf("WHY %s\n",received);
 		if(UT_isEqual(received,"OK") == 1){
 			printf("Ready\n");
 			timeout = 100;
@@ -140,7 +139,9 @@ int MODEM_enviarMensajes(char* received){
 	char mensajeTexto[255];
 	if(MODEM_modoTexto(received) == 1){
 		memset(received, 0, sizeof(received));
-		serDputs("AT+CMGS=\"091328177\"\r");
+		memset(mensajeTexto, 0, sizeof(mensajeTexto));
+		sprintf(mensajeTexto,"AT+CMGS=\"%s\"\r",CELLPHONE);
+		serDputs(mensajeTexto);
 		while(!serDrdUsed());
 		memset(received, 0, sizeof(received));
 		IO_leerPuertoD(received);
@@ -190,10 +191,13 @@ int MODEM_borrarMensajes(char * received){
 int MODEM_ponerPin(char* received);
 /*** EndHeader */
 int MODEM_ponerPin(char* received){
+	char mensajeTexto[255];
 	MODEM_comunicarse("AT+CPIN?");
 	IO_leerPuertoD(received);
 	if(UT_isEqual(received,"SIM PIN") == 1){
-		MODEM_comunicarse("AT+CPIN=9006");
+		memset(mensajeTexto, 0, sizeof(mensajeTexto));
+		sprintf(mensajeTexto,"AT+CPIN=%s",CODIGO_PIN);
+		MODEM_comunicarse(mensajeTexto);
 		IO_leerPuertoD(received);
 		if(UT_isEqual(received,"OK") == 1){
 			return 1;

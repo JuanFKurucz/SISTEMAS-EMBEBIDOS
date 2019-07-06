@@ -13,8 +13,8 @@ Pendientes:
 #define MAXIMO_RITMO_CARDIACO 220.0
 #define MAX_TIMEOUT_KEEPALIVE 600		//10 minutos en segundos
 #define PIN_ANALOGICO_CARDIACO 0
-#define CELLPHONE "091829233"
-#define CODIGO_PIN "5454"
+#define CELLPHONE "091328177"
+#define CODIGO_PIN "9006"
 
 #define OS_TIME_DLY_HMSM_EN 1
 #define OS_MEM_EN 1
