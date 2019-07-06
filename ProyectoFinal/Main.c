@@ -7,7 +7,7 @@
 #define PRESICION_LONGITUD 2
 #define MINIMO_RITMO_CARDIACO 50.0
 #define MAXIMO_RITMO_CARDIACO 220.0
-#define MAX_TIMEOUT_KEEPALIVE 10		//600 == 10 minutos en segundos
+#define MAX_TIMEOUT_KEEPALIVE 60		//600 == 10 minutos en segundos
 #define PIN_ANALOGICO_CARDIACO 0
 #define CELLPHONE "091328177"
 #define CODIGO_PIN "9006"
